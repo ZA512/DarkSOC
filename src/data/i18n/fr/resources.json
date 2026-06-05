@@ -1,0 +1,14 @@
+{
+  "resources.alertNoise": "Bruit d’alertes",
+  "resources.budget": "Budget",
+  "resources.exposure": "Exposition",
+  "resources.fatigue": "Fatigue",
+  "resources.findings": "Constats",
+  "resources.knownDebt": "Dette connue",
+  "resources.logs": "Logs",
+  "resources.proofs": "Preuves",
+  "resources.resilience": "Résilience",
+  "resources.trust": "Confiance COMEX",
+  "resources.unknownDebt": "Dette inconnue",
+  "resources.visibility": "Visibilité"
+}

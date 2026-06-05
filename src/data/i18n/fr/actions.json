@@ -1,0 +1,4 @@
+{
+  "actions.collect_logs.description": "Récupère quelques signaux dans le bruit ambiant.",
+  "actions.collect_logs.label": "Collecter des logs"
+}

@@ -1,0 +1,9 @@
+{
+  "app.title": "Dark SOC",
+  "assets.unknown_server_1.name": "Serveur inconnu",
+  "ui.actions.title": "Actions",
+  "ui.infrastructure.placeholder": "Un point dans l’obscurité. Pour l’instant.",
+  "ui.infrastructure.title": "InfrastructureMap",
+  "ui.narrative.title": "Journal",
+  "ui.resources.title": "Ressources"
+}
