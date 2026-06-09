@@ -1,0 +1,45 @@
+{
+  "collect_logs": {
+    "durationMs": 2500,
+    "cost": {},
+    "effect": {
+      "logs": 10
+    },
+    "completedMessageKey": "events.action.collect_logs.completed"
+  },
+  "analyze_alert": {
+    "durationMs": 3500,
+    "cost": {
+      "logs": 10
+    },
+    "effect": {
+      "findings": 5,
+      "fatigue": 1
+    },
+    "completedMessageKey": "events.action.analyze_alert.completed"
+  },
+  "manual_audit": {
+    "durationMs": 5000,
+    "cost": {},
+    "effect": {
+      "findings": 5,
+      "proofs": 3,
+      "unknownDebt": -5,
+      "knownDebt": 4,
+      "fatigue": 1
+    },
+    "completedMessageKey": "events.action.manual_audit.completed"
+  },
+  "write_comex_report": {
+    "durationMs": 6000,
+    "cost": {
+      "findings": 20,
+      "proofs": 20
+    },
+    "effect": {
+      "trust": 5,
+      "budget": 50
+    },
+    "completedMessageKey": "events.action.write_comex_report.completed"
+  }
+}

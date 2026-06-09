@@ -1,0 +1,158 @@
+[
+  {
+    "id": "asset_register",
+    "category": "governance",
+    "cost": {
+      "logs": 80,
+      "findings": 30
+    },
+    "requires": [],
+    "effects": {
+      "visibility": 10,
+      "unknownDebt": -10,
+      "knownDebt": 8
+    },
+    "unlocks": [
+      "basic_log_collector",
+      "basic_vulnerability_scanner",
+      "incident_procedure_v0",
+      "phishing_awareness_v0"
+    ]
+  },
+  {
+    "id": "basic_log_collector",
+    "category": "detection",
+    "cost": {
+      "logs": 100,
+      "budget": 50
+    },
+    "requires": [
+      "asset_register"
+    ],
+    "effects": {
+      "logsPerTick": 2
+    },
+    "unlocks": [
+      "centralized_logs"
+    ]
+  },
+  {
+    "id": "basic_vulnerability_scanner",
+    "category": "risk_reduction",
+    "cost": {
+      "findings": 120,
+      "budget": 80
+    },
+    "requires": [
+      "asset_register"
+    ],
+    "effects": {
+      "findingsPerTick": 1,
+      "unknownDebt": -20,
+      "knownDebt": 15
+    },
+    "unlocks": [
+      "patch_management_v1"
+    ]
+  },
+  {
+    "id": "incident_procedure_v0",
+    "category": "resilience",
+    "cost": {
+      "proofs": 60,
+      "findings": 40
+    },
+    "requires": [],
+    "effects": {
+      "resilience": 10,
+      "incidentResponse": 5
+    },
+    "unlocks": []
+  },
+  {
+    "id": "phishing_awareness_v0",
+    "category": "governance",
+    "cost": {
+      "proofs": 80,
+      "budget": 50
+    },
+    "requires": [],
+    "effects": {
+      "phishingDefense": 10,
+      "governance": 5
+    },
+    "unlocks": []
+  },
+  {
+    "id": "centralized_logs",
+    "category": "detection",
+    "cost": {
+      "budget": 300,
+      "logs": 300
+    },
+    "requires": [
+      "basic_log_collector"
+    ],
+    "effects": {
+      "logsPerTick": 5,
+      "detection": 10,
+      "alertNoise": 10
+    },
+    "unlocks": [
+      "minimal_siem"
+    ]
+  },
+  {
+    "id": "minimal_siem",
+    "category": "detection",
+    "cost": {
+      "budget": 800,
+      "logs": 600,
+      "proofs": 150
+    },
+    "requires": [
+      "centralized_logs"
+    ],
+    "effects": {
+      "detection": 20,
+      "alertNoise": 25
+    },
+    "unlocks": [
+      "siem_analyst"
+    ]
+  },
+  {
+    "id": "siem_analyst",
+    "category": "detection",
+    "cost": {
+      "budget": 300,
+      "trust": 40
+    },
+    "requires": [
+      "minimal_siem"
+    ],
+    "effects": {
+      "detection": 15,
+      "alertNoise": -20,
+      "fatigue": -5
+    },
+    "unlocks": []
+  },
+  {
+    "id": "patch_management_v1",
+    "category": "risk_reduction",
+    "cost": {
+      "budget": 400,
+      "findings": 200
+    },
+    "requires": [
+      "basic_vulnerability_scanner"
+    ],
+    "effects": {
+      "patching": 15,
+      "knownDebt": -15,
+      "fatigue": 3
+    },
+    "unlocks": []
+  }
+]

@@ -1,4 +1,12 @@
 {
   "actions.collect_logs.description": "Récupère quelques signaux dans le bruit ambiant.",
-  "actions.collect_logs.label": "Collecter des logs"
+  "actions.collect_logs.label": "Collecter des logs",
+  "actions.analyze_alert.label": "Analyser une alerte",
+  "actions.analyze_alert.description": "Transforme des logs en constats exploitables.",
+  "actions.manual_audit.label": "Faire un audit manuel",
+  "actions.manual_audit.description": "Révèle de la dette cyber. Ce n’est pas toujours agréable.",
+  "actions.write_comex_report.label": "Préparer un rapport COMEX",
+  "actions.write_comex_report.description": "Transforme des preuves en confiance et parfois en budget.",
+  "actions.running": "Action en cours",
+  "actions.progress": "Progression"
 }

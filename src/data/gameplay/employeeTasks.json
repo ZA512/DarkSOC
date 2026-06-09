@@ -1,0 +1,103 @@
+[
+  {
+    "id": "admin_collect_logs",
+    "compatibleRoles": ["admin"],
+    "nameKey": "employeeTasks.admin_collect_logs.name",
+    "descriptionKey": "employeeTasks.admin_collect_logs.description",
+    "effectsPerTick": {
+      "logs": 1
+    },
+    "fatiguePerTick": 0.05
+  },
+  {
+    "id": "admin_inventory",
+    "compatibleRoles": ["admin"],
+    "nameKey": "employeeTasks.admin_inventory.name",
+    "descriptionKey": "employeeTasks.admin_inventory.description",
+    "effectsPerTick": {
+      "findings": 0.5,
+      "visibility": 0.05
+    },
+    "fatiguePerTick": 0.05
+  },
+  {
+    "id": "analyst_alert_triage",
+    "compatibleRoles": ["analyst"],
+    "nameKey": "employeeTasks.analyst_alert_triage.name",
+    "descriptionKey": "employeeTasks.analyst_alert_triage.description",
+    "effectsPerTick": {
+      "findings": 0.5,
+      "detection": 5,
+      "alertNoise": -0.1
+    },
+    "fatiguePerTick": 0.08
+  },
+  {
+    "id": "analyst_siem_tuning",
+    "compatibleRoles": ["analyst"],
+    "nameKey": "employeeTasks.analyst_siem_tuning.name",
+    "descriptionKey": "employeeTasks.analyst_siem_tuning.description",
+    "requiresTechnologyIds": ["minimal_siem"],
+    "effectsPerTick": {
+      "detection": 3,
+      "alertNoise": -0.2
+    },
+    "fatiguePerTick": 0.06
+  },
+  {
+    "id": "auditor_manual_audit",
+    "compatibleRoles": ["auditor"],
+    "nameKey": "employeeTasks.auditor_manual_audit.name",
+    "descriptionKey": "employeeTasks.auditor_manual_audit.description",
+    "effectsPerTick": {
+      "findings": 0.8,
+      "proofs": 0.5,
+      "unknownDebt": -0.2,
+      "knownDebt": 0.15
+    },
+    "fatiguePerTick": 0.04
+  },
+  {
+    "id": "secops_remediation",
+    "compatibleRoles": ["secops"],
+    "nameKey": "employeeTasks.secops_remediation.name",
+    "descriptionKey": "employeeTasks.secops_remediation.description",
+    "effectsPerTick": {
+      "knownDebt": -0.5
+    },
+    "fatiguePerTick": 0.08
+  },
+  {
+    "id": "secops_hardening",
+    "compatibleRoles": ["secops"],
+    "nameKey": "employeeTasks.secops_hardening.name",
+    "descriptionKey": "employeeTasks.secops_hardening.description",
+    "effectsPerTick": {
+      "patching": 5,
+      "knownDebt": -0.2
+    },
+    "fatiguePerTick": 0.06
+  },
+  {
+    "id": "governance_prepare_proofs",
+    "compatibleRoles": ["governance"],
+    "nameKey": "employeeTasks.governance_prepare_proofs.name",
+    "descriptionKey": "employeeTasks.governance_prepare_proofs.description",
+    "effectsPerTick": {
+      "proofs": 0.8
+    },
+    "fatiguePerTick": 0.03
+  },
+  {
+    "id": "governance_comex_alignment",
+    "compatibleRoles": ["governance"],
+    "nameKey": "employeeTasks.governance_comex_alignment.name",
+    "descriptionKey": "employeeTasks.governance_comex_alignment.description",
+    "effectsPerTick": {
+      "trust": 0.05,
+      "proofs": 0.3,
+      "governance": 3
+    },
+    "fatiguePerTick": 0.04
+  }
+]

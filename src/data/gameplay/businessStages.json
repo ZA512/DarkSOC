@@ -1,0 +1,12 @@
+[
+  {
+    "id": "small_company",
+    "level": 1,
+    "nameKey": "business.stage.small_company"
+  },
+  {
+    "id": "visible_pme",
+    "level": 2,
+    "nameKey": "business.stage.visible_pme"
+  }
+]

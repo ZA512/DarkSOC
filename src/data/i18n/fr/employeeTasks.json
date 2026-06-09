@@ -1,0 +1,20 @@
+{
+  "employeeTasks.admin_collect_logs.name": "Collecte de logs",
+  "employeeTasks.admin_collect_logs.description": "Récupère quelques signaux supplémentaires à chaque cycle.",
+  "employeeTasks.admin_inventory.name": "Inventaire manuel",
+  "employeeTasks.admin_inventory.description": "Ajoute lentement de la visibilité sur le SI.",
+  "employeeTasks.analyst_alert_triage.name": "Tri des alertes",
+  "employeeTasks.analyst_alert_triage.description": "Réduit le bruit et augmente la détection utile.",
+  "employeeTasks.analyst_siem_tuning.name": "Réglage SIEM",
+  "employeeTasks.analyst_siem_tuning.description": "Ajuste les règles du SIEM pour retrouver un signal dans le bruit.",
+  "employeeTasks.auditor_manual_audit.name": "Audit continu",
+  "employeeTasks.auditor_manual_audit.description": "Produit des constats et des preuves, au prix de quelques mauvaises surprises.",
+  "employeeTasks.secops_remediation.name": "Remédiation",
+  "employeeTasks.secops_remediation.description": "Réduit progressivement la dette cyber connue.",
+  "employeeTasks.secops_hardening.name": "Durcissement",
+  "employeeTasks.secops_hardening.description": "Améliore le niveau de patching et réduit les faiblesses connues.",
+  "employeeTasks.governance_prepare_proofs.name": "Préparation des preuves",
+  "employeeTasks.governance_prepare_proofs.description": "Produit des preuves utiles pour les audits, le COMEX et les assurances.",
+  "employeeTasks.governance_comex_alignment.name": "Alignement COMEX",
+  "employeeTasks.governance_comex_alignment.description": "Transforme lentement la sécurité en sujet de pilotage."
+}

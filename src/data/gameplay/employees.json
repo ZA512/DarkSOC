@@ -1,0 +1,42 @@
+[
+  {
+    "id": "admin_1",
+    "role": "admin",
+    "nameKey": "employees.admin_1.name",
+    "descriptionKey": "employees.admin_1.description",
+    "unlocked": true,
+    "fatigue": 0
+  },
+  {
+    "id": "analyst_1",
+    "role": "analyst",
+    "nameKey": "employees.analyst_1.name",
+    "descriptionKey": "employees.analyst_1.description",
+    "unlocked": false,
+    "fatigue": 0
+  },
+  {
+    "id": "auditor_1",
+    "role": "auditor",
+    "nameKey": "employees.auditor_1.name",
+    "descriptionKey": "employees.auditor_1.description",
+    "unlocked": false,
+    "fatigue": 0
+  },
+  {
+    "id": "secops_1",
+    "role": "secops",
+    "nameKey": "employees.secops_1.name",
+    "descriptionKey": "employees.secops_1.description",
+    "unlocked": false,
+    "fatigue": 0
+  },
+  {
+    "id": "governance_1",
+    "role": "governance",
+    "nameKey": "employees.governance_1.name",
+    "descriptionKey": "employees.governance_1.description",
+    "unlocked": false,
+    "fatigue": 0
+  }
+]

@@ -1,0 +1,148 @@
+[
+  {
+    "id": "phishing_basic",
+    "family": "phishing",
+    "basePower": 20,
+    "scaling": {
+      "exposure": 0.2,
+      "fatigue": 0.2,
+      "businessSize": 4
+    },
+    "relevantDefenses": [
+      "phishingDefense",
+      "mfa",
+      "identitySecurity",
+      "detection"
+    ],
+    "impacts": {
+      "blocked": {
+        "findings": 3,
+        "proofs": 1,
+        "fatigue": 1
+      },
+      "partial": {
+        "findings": 8,
+        "fatigue": 6,
+        "trust": -4,
+        "budget": -30
+      },
+      "major": {
+        "findings": 15,
+        "fatigue": 15,
+        "trust": -10,
+        "budget": -120,
+        "knownDebt": 5
+      }
+    }
+  },
+  {
+    "id": "ransomware_minor",
+    "family": "ransomware",
+    "basePower": 35,
+    "scaling": {
+      "knownDebt": 0.2,
+      "unknownDebt": 0.15,
+      "fatigue": 0.25,
+      "businessSize": 5
+    },
+    "relevantDefenses": [
+      "edr",
+      "backup",
+      "segmentation",
+      "incidentResponse",
+      "resilience",
+      "detection"
+    ],
+    "impacts": {
+      "blocked": {
+        "findings": 5,
+        "proofs": 2,
+        "fatigue": 2
+      },
+      "partial": {
+        "budget": -100,
+        "trust": -8,
+        "fatigue": 15,
+        "findings": 20,
+        "knownDebt": 5
+      },
+      "major": {
+        "budget": -300,
+        "trust": -18,
+        "fatigue": 30,
+        "findings": 40,
+        "knownDebt": 10,
+        "resilience": -10
+      }
+    }
+  },
+  {
+    "id": "vulnerable_web_app",
+    "family": "web",
+    "basePower": 30,
+    "scaling": {
+      "exposure": 0.3,
+      "knownDebt": 0.2,
+      "businessSize": 5
+    },
+    "relevantDefenses": [
+      "appsec",
+      "waf",
+      "patching",
+      "detection"
+    ],
+    "impacts": {
+      "blocked": {
+        "findings": 5,
+        "proofs": 1
+      },
+      "partial": {
+        "trust": -6,
+        "budget": -80,
+        "findings": 15,
+        "knownDebt": 5
+      },
+      "major": {
+        "trust": -15,
+        "budget": -250,
+        "findings": 35,
+        "knownDebt": 10,
+        "exposure": 5,
+        "fatigue": 12
+      }
+    }
+  },
+  {
+    "id": "client_audit",
+    "family": "audit",
+    "basePower": 25,
+    "scaling": {
+      "businessSize": 6,
+      "knownDebt": 0.1
+    },
+    "relevantDefenses": [
+      "proofs",
+      "governance",
+      "thirdPartyManagement",
+      "visibility"
+    ],
+    "impacts": {
+      "blocked": {
+        "trust": 8,
+        "budget": 100,
+        "proofs": -20
+      },
+      "partial": {
+        "trust": -4,
+        "findings": 10,
+        "proofs": -10
+      },
+      "major": {
+        "trust": -12,
+        "budget": -100,
+        "findings": 20,
+        "fatigue": 8
+      }
+    }
+  }
+]

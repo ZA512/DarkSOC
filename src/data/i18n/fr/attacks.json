@@ -1,0 +1,9 @@
+{
+  "attacks.outcome.blocked": "Bloquée",
+  "attacks.outcome.major": "Majeur",
+  "attacks.outcome.partial": "Partiel",
+  "attacks.client_audit.name": "Audit client",
+  "attacks.phishing_basic.name": "Phishing basique",
+  "attacks.ransomware_minor.name": "Ransomware mineur",
+  "attacks.vulnerable_web_app.name": "Application web vulnérable"
+}
