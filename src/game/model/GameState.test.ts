@@ -34,8 +34,25 @@ describe('createInitialGameState', () => {
     expect(state.activeIncidentIds).toEqual([]);
     expect(state.resolvedIncidentIds).toEqual([]);
     expect(state.businessStageId).toBe('small_company');
+    expect(state.businessEventHistory).toEqual([]);
+    expect(state.pendingBusinessEventId).toBeUndefined();
+    expect(state.businessMomentum).toBe(0);
+    expect(state.currentSeasonId).toBe('season_1_visibility');
+    expect(state.completedSeasonIds).toEqual([]);
+    expect(state.objectives.collect_first_logs).toBe('active');
+    expect(state.objectives.create_asset_register).toBe('locked');
+    expect(state.completedObjectiveIds).toEqual([]);
+    expect(state.survivedIncidentCount).toBe(0);
+    expect(state.resolvedCrisisCount).toBe(0);
+    expect(state.showOnboarding).toBe(true);
+    expect(state.showSeasonSummary).toBe(false);
+    expect(state.crisis).toEqual({
+      level: 'none',
+      causes: [],
+      recoveryProgress: 0,
+    });
     expect(state.flags).toEqual({});
     expect(state.modified).toBe(false);
-    expect(state.runningAction).toBeUndefined();
+    expect(state.runningActions).toEqual([]);
   });
 });

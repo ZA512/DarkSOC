@@ -1,13 +1,13 @@
 <script lang="ts">
   import { selectVisibleResources } from '../../game/engine/selectors';
-  import type { Resources } from '../../game/model/Resource';
+  import type { GameState } from '../../game/model/GameState';
   import type { Locale } from '../../game/model/Settings';
   import { t } from '../../i18n/i18n';
 
-  export let resources: Resources;
+  export let state: GameState;
   export let locale: Locale = 'fr';
 
-  $: visibleResources = selectVisibleResources(resources);
+  $: visibleResources = selectVisibleResources(state);
 
   function formatResourceValue(value: number): string {
     return Number.isInteger(value) ? String(value) : value.toFixed(1);

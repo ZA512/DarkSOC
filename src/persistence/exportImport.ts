@@ -2,7 +2,12 @@ import type { GameState } from '../game/model/GameState';
 import { CURRENT_SAVE_VERSION, migrateSavePayload } from './migrations';
 import { computeChecksum, decodePayload, encodePayload, verifyChecksum } from './saveCodec';
 import type { ImportResult, SaveGameEnvelope, SavePayloadV1 } from './saveTypes';
-import { normalizeGameState, validateGameState } from './validation';
+import {
+  normalizeGameState,
+  normalizeLoadedGameState,
+  validateGameState,
+  validateLoadedGameState,
+} from './validation';
 
 const DEFAULT_GAME_VERSION = '0.1.0';
 const DEFAULT_SLOT_NAME = 'Partie principale';
@@ -125,23 +130,36 @@ export async function importSaveEnvelope(raw: string): Promise<ImportResult> {
     };
   }
 
-  const validationResult = validateGameState(migrationResult.payload.state);
+  const loadValidationResult = validateLoadedGameState(migrationResult.payload.state);
 
-  if (!validationResult.ok) {
+  if (!loadValidationResult.ok) {
     return {
       ok: false,
       reason: 'invalid_state',
-      errors: validationResult.errors,
+      errors: loadValidationResult.errors,
     };
   }
 
-  const normalizedState = normalizeGameState({
-    ...validationResult.value,
-    createdAt: validationResult.value.createdAt ?? envelope.createdAt,
-    updatedAt: validationResult.value.updatedAt ?? envelope.updatedAt,
-    modified: validationResult.value.modified === true || envelope.modified === true,
+  const normalizedState = normalizeLoadedGameState({
+    ...loadValidationResult.value,
+    createdAt: loadValidationResult.value.createdAt ?? envelope.createdAt,
+    updatedAt: loadValidationResult.value.updatedAt ?? envelope.updatedAt,
+    modified: loadValidationResult.value.modified === true || envelope.modified === true,
   });
-  const warnings = [...(validationResult.warnings ?? [])];
+  const normalizedValidationResult = validateGameState(normalizedState);
+
+  if (!normalizedValidationResult.ok) {
+    return {
+      ok: false,
+      reason: 'invalid_state',
+      errors: normalizedValidationResult.errors,
+    };
+  }
+
+  const warnings = [
+    ...(loadValidationResult.warnings ?? []),
+    ...(normalizedValidationResult.warnings ?? []),
+  ];
 
   if (!checksumValid) {
     warnings.push('invalid_checksum');

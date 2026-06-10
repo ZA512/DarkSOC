@@ -2,8 +2,8 @@ import attacksData from '../../data/gameplay/attacks.json';
 import type { Attack, AttackImpact, AttackOutcome } from '../model/Attack';
 import type { GameState } from '../model/GameState';
 import type { EffectiveStats, TechnologyStatId } from '../model/Technology';
+import { getBusinessStageLevel } from './business';
 import { getEffectiveStats } from './selectors';
-import { getBusinessStageLevel } from './threat';
 
 export const ATTACKS = attacksData as Attack[];
 

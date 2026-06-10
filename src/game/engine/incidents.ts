@@ -41,13 +41,22 @@ export function clearExpiredIncidents(state: GameState): GameState {
 export function applyAttackToState(state: GameState, attack: Attack): GameState {
   const resolution = resolveAttack(state, attack);
   const incidentCount = resolution.outcome === 'major' ? 3 : resolution.outcome === 'partial' ? 1 : 0;
+  const survivedIncidentIncrement = resolution.outcome === 'blocked' ? 0 : 1;
 
   const nextState: GameState = {
     ...state,
     resources: applyResourceDelta(state.resources, resolution.impact),
     narrativeLog: state.narrativeLog,
+    flags:
+      attack.id === 'client_audit' && resolution.outcome === 'major'
+        ? {
+            ...state.flags,
+            audit_failure: true,
+          }
+        : state.flags,
     lastAttackTurn: state.turn,
     pendingWarningAttackId: state.pendingWarningAttackId === attack.id ? undefined : state.pendingWarningAttackId,
+    survivedIncidentCount: state.survivedIncidentCount + survivedIncidentIncrement,
     activeIncidentIds:
       incidentCount > 0 ? createIncidentIds(attack, state, incidentCount) : state.activeIncidentIds,
     incidentUntilTurn: incidentCount > 0 ? state.turn + (resolution.outcome === 'major' ? 5 : 3) : state.incidentUntilTurn,

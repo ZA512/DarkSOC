@@ -34,6 +34,33 @@ describe('getThreatPressure', () => {
 
     expect(getThreatPressure(pressuredState)).toBeGreaterThan(getThreatPressure(state));
   });
+
+  it('increases with business momentum and the stage pressure modifier', () => {
+    const state = createInitialGameState();
+    const pressuredState = {
+      ...state,
+      businessStageId: 'visible_pme' as const,
+      businessMomentum: 20,
+    };
+
+    expect(getThreatPressure(pressuredState)).toBeGreaterThan(getThreatPressure(state));
+  });
+
+  it('adds crisis pressure on top of the base threat', () => {
+    const state = createInitialGameState();
+    const pressuredState = {
+      ...state,
+      crisis: {
+        level: 'active' as const,
+        causes: ['major_incident' as const],
+        startedAtTurn: 15,
+        lastEscalationTurn: 15,
+        recoveryProgress: 0,
+      },
+    };
+
+    expect(getThreatPressure(pressuredState)).toBeGreaterThan(getThreatPressure(state));
+  });
 });
 
 describe('shouldTriggerAttack', () => {

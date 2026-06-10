@@ -1,7 +1,8 @@
-import businessStagesData from '../../data/gameplay/businessStages.json';
-import type { BusinessStage } from '../model/BusinessStage';
 import type { GameState } from '../model/GameState';
+import { getBusinessStage, getBusinessStageLevel } from './business';
 import { getEffectiveStats } from './selectors';
+
+export { getBusinessStage, getBusinessStageLevel } from './business';
 
 export const THREAT_RULES = {
   initialGraceTicks: 30,
@@ -10,8 +11,28 @@ export const THREAT_RULES = {
   minimumTicksBetweenAttacks: 20,
 } as const;
 
-const BUSINESS_STAGES = businessStagesData as BusinessStage[];
-const businessStagesById = new Map(BUSINESS_STAGES.map((stage) => [stage.id, stage]));
+function getCrisisThreatBonus(level: GameState['crisis']['level']): number {
+  switch (level) {
+    case 'watch':
+      return 5;
+
+    case 'active':
+      return 15;
+
+    case 'severe':
+      return 25;
+
+    case 'recovery':
+      return 5;
+
+    case 'none':
+      return 0;
+  }
+}
+
+function getCrisisCooldownBonus(level: GameState['crisis']['level']): number {
+  return level === 'severe' ? 10 : 0;
+}
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
@@ -25,14 +46,6 @@ function hashString(value: string): number {
   }
 
   return hash;
-}
-
-export function getBusinessStage(state: GameState): BusinessStage {
-  return businessStagesById.get(state.businessStageId) ?? BUSINESS_STAGES[0];
-}
-
-export function getBusinessStageLevel(state: GameState): number {
-  return getBusinessStage(state).level;
 }
 
 export function getCyberMaturity(state: GameState): number {
@@ -53,16 +66,22 @@ export function getCyberMaturity(state: GameState): number {
   return clamp(maturity, 0, 100);
 }
 
-export function getThreatPressure(state: GameState): number {
-  const businessStageLevel = getBusinessStageLevel(state);
+export function getThreatPressureBase(state: GameState): number {
+  const businessStage = getBusinessStage(state);
   const maturity = getCyberMaturity(state);
-  const threatPressure =
-    businessStageLevel * 10 +
+  const rawThreatPressure =
+    businessStage.level * 10 +
     state.resources.exposure * 0.6 +
     state.resources.knownDebt * 0.2 +
     state.resources.unknownDebt * 0.15 +
-    state.resources.alertNoise * 0.1 -
+    state.resources.alertNoise * 0.1 +
+    state.businessMomentum * 0.2 -
     maturity * 0.25;
+  return Math.max(0, rawThreatPressure * businessStage.attackPressureModifier);
+}
+
+export function getThreatPressure(state: GameState): number {
+  const threatPressure = getThreatPressureBase(state) + getCrisisThreatBonus(state.crisis.level);
 
   return Math.max(0, threatPressure);
 }
@@ -79,7 +98,7 @@ export function shouldTriggerAttack(state: GameState, randomValue: number): bool
 
   if (
     typeof state.lastAttackTurn === 'number' &&
-    state.turn - state.lastAttackTurn < THREAT_RULES.minimumTicksBetweenAttacks
+    state.turn - state.lastAttackTurn < THREAT_RULES.minimumTicksBetweenAttacks + getCrisisCooldownBonus(state.crisis.level)
   ) {
     return false;
   }

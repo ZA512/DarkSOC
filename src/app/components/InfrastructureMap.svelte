@@ -54,7 +54,7 @@
   <div class="infrastructure-map__header">
     <h2 id="infrastructure-title">{t('infrastructure.title', locale)}</h2>
     <p id="infrastructure-subtitle" class="infrastructure-map__subtitle">
-      {t(getSubtitleKey(mapView.nodes.length), locale)}
+      {mapView.nodes.length} {t('infrastructure.summary.nodes', locale).toLowerCase()} · {mapView.links.length} {t('infrastructure.summary.links', locale).toLowerCase()}
     </p>
   </div>
 
@@ -97,23 +97,16 @@
     {/each}
   </svg>
 
-  <dl class="infrastructure-map__summary">
-    <div>
-      <dt>{t('infrastructure.summary.nodes', locale)}</dt>
-      <dd>{mapView.nodes.length}</dd>
-    </div>
-    <div>
-      <dt>{t('infrastructure.summary.links', locale)}</dt>
-      <dd>{mapView.links.length}</dd>
-    </div>
-  </dl>
-
-  <ul class="infrastructure-map__legend" aria-label={t('infrastructure.legend.title', locale)}>
-    {#each legendStatuses as status (status)}
-      <li>
-        <span class={`infrastructure-map__legend-dot infrastructure-map__legend-dot--${status}`}></span>
-        <span>{t(`infrastructure.legend.${status}`, locale)}</span>
-      </li>
-    {/each}
-  </ul>
+  {#if mapView.nodes.length > 1}
+    <ul class="infrastructure-map__legend" aria-label={t('infrastructure.legend.title', locale)}>
+      {#each legendStatuses as status (status)}
+        <li>
+          <span class={`infrastructure-map__legend-dot infrastructure-map__legend-dot--${status}`}></span>
+          <span>{t(`infrastructure.legend.${status}`, locale)}</span>
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <p class="infrastructure-map__note">{t(getSubtitleKey(mapView.nodes.length), locale)}</p>
+  {/if}
 </aside>

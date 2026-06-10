@@ -1,5 +1,1 @@
-export type BusinessStage = {
-  id: string;
-  level: number;
-  nameKey: string;
-};
+export type { BusinessStage, BusinessStageId } from './Business';

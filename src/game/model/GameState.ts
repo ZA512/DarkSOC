@@ -1,7 +1,11 @@
 import { normalizeResources, type Resources } from './Resource';
 import type { RunningAction } from './ManualAction';
 import type { GameSettings } from './Settings';
+import type { BusinessStageId } from './Business';
+import { INITIAL_CRISIS_STATE, type CrisisState } from './Crisis';
 import { createInitialEmployees, type Employee } from './Employee';
+import type { ObjectiveStatus } from './Objective';
+import { createInitialObjectiveStatuses } from '../engine/objectives';
 
 export type AssetStatus = 'unknown' | 'known' | 'stable' | 'debt' | 'incident' | 'critical';
 
@@ -39,9 +43,21 @@ export type GameState = {
   narrativeLog: NarrativeLogEntry[];
   flags: Record<string, boolean>;
   settings: GameSettings;
-  businessStageId: string;
+  businessStageId: BusinessStageId;
+  businessEventHistory: string[];
+  pendingBusinessEventId?: string;
+  businessMomentum: number;
+  currentSeasonId: string;
+  completedSeasonIds: string[];
+  objectives: Record<string, ObjectiveStatus>;
+  completedObjectiveIds: string[];
+  survivedIncidentCount: number;
+  resolvedCrisisCount: number;
+  showOnboarding: boolean;
+  showSeasonSummary: boolean;
+  crisis: CrisisState;
   modified?: boolean;
-  runningAction?: RunningAction;
+  runningActions: RunningAction[];
 };
 
 export function createInitialGameState(seed = 'dark-soc-seed-1'): GameState {
@@ -103,7 +119,21 @@ export function createInitialGameState(seed = 'dark-soc-seed-1'): GameState {
       contrastMode: 'normal',
     },
     businessStageId: 'small_company',
+    businessEventHistory: [],
+    pendingBusinessEventId: undefined,
+    businessMomentum: 0,
+    currentSeasonId: 'season_1_visibility',
+    completedSeasonIds: [],
+    objectives: createInitialObjectiveStatuses(),
+    completedObjectiveIds: [],
+    survivedIncidentCount: 0,
+    resolvedCrisisCount: 0,
+    showOnboarding: true,
+    showSeasonSummary: false,
+    crisis: {
+      ...INITIAL_CRISIS_STATE,
+    },
     modified: false,
-    runningAction: undefined,
+    runningActions: [],
   };
 }

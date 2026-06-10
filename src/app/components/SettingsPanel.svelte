@@ -4,6 +4,7 @@
 
   export let settings: GameSettings;
   export let locale: Locale = 'fr';
+  export let compact = false;
   export let onSetAnimationMode: (animationMode: AnimationMode) => void;
 
   const animationModes: AnimationMode[] = ['normal', 'reduced', 'off'];
@@ -15,8 +16,10 @@
   }
 </script>
 
-<section class="settings-panel" aria-labelledby="settings-title">
-  <h2 id="settings-title">{t('settings.title', locale)}</h2>
+<section class={`settings-panel ${compact ? 'settings-panel--compact' : ''}`} aria-label={t('settings.title', locale)}>
+  {#if !compact}
+    <h2 id="settings-title">{t('settings.title', locale)}</h2>
+  {/if}
 
   <label class="settings-panel__field" for="animation-mode-select">
     <span class="settings-panel__label">{t('settings.animationMode.label', locale)}</span>

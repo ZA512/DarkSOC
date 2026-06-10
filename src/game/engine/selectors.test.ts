@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   canAssignEmployeeTask,
+  canExecuteCrisisAction,
   getAvailableTasksForEmployee,
+  getAvailableCrisisActions,
   getActiveIncidentSummaries,
   canBuyTechnology,
+  getCurrentBusinessStage,
+  getCrisisCauseLabelKeys,
+  getCrisisStatusLabelKey,
   getEmployeeById,
   getAvailableManualActions,
   getAvailableTechnologies,
@@ -12,12 +17,24 @@ import {
   getInfrastructureNodeStatus,
   getLockedEmployees,
   getLastThreatEvent,
+  getNextBusinessStage,
+  getPendingBusinessEvent,
+  getVisibleAvailableTechnologies,
+  getVisibleLockedEmployees,
+  getVisibleTabs,
+  getVisibleUnlockedEmployees,
   getUnlockedEmployees,
   getVisibleInfrastructureNodeCount,
+  isBusinessPanelVisible,
+  isEmployeePanelVisible,
+  isInCrisis,
+  isTechnologyPanelVisible,
+  isThreatPanelVisible,
   getLockedTechnologies,
   getTechnologyById,
   getTechnologyMissingRequirements,
   getTechnologyMissingResources,
+  selectVisibleResources,
 } from './selectors';
 import { createInitialGameState } from '../model/GameState';
 import { normalizeResources } from '../model/Resource';
@@ -175,6 +192,38 @@ describe('technology selectors', () => {
       findingsPerTick: 1,
     });
   });
+
+  it('reveals technology UI progressively instead of showing the whole tree at start', () => {
+    const initialState = createInitialGameState();
+    const nearAssetRegisterState = {
+      ...initialState,
+      resources: normalizeResources({
+        ...initialState.resources,
+        logs: 30,
+      }),
+    };
+    const postAssetRegisterState = {
+      ...initialState,
+      unlockedTechnologyIds: ['asset_register'],
+      availableTechnologyIds: [
+        ...initialState.availableTechnologyIds,
+        'basic_log_collector',
+        'basic_vulnerability_scanner',
+      ],
+    };
+
+    expect(isTechnologyPanelVisible(initialState)).toBe(false);
+    expect(getVisibleAvailableTechnologies(initialState)).toEqual([]);
+    expect(getVisibleAvailableTechnologies(nearAssetRegisterState).map((technology) => technology.id)).toEqual([
+      'asset_register',
+    ]);
+    expect(getVisibleAvailableTechnologies(postAssetRegisterState).map((technology) => technology.id)).toEqual([
+      'basic_log_collector',
+      'basic_vulnerability_scanner',
+      'incident_procedure_v0',
+      'phishing_awareness_v0',
+    ]);
+  });
 });
 
 describe('employee selectors', () => {
@@ -243,11 +292,94 @@ describe('employee selectors', () => {
       detection: 13.75,
     });
   });
+
+  it('reveals the employee UI progressively instead of listing the full roster immediately', () => {
+    const initialState = createInitialGameState();
+    const logsState = {
+      ...initialState,
+      resources: normalizeResources({
+        ...initialState.resources,
+        logs: 10,
+      }),
+    };
+
+    expect(isEmployeePanelVisible(initialState)).toBe(false);
+    expect(getVisibleUnlockedEmployees(initialState)).toEqual([]);
+    expect(getVisibleLockedEmployees(initialState)).toEqual([]);
+    expect(getVisibleUnlockedEmployees(logsState).map((employee) => employee.id)).toEqual(['admin_1']);
+  });
+});
+
+describe('progressive reveal selectors', () => {
+  it('shows only minimal useful resources at start', () => {
+    const state = createInitialGameState();
+
+    expect(selectVisibleResources(state).map((resource) => resource.id)).toEqual([
+      'logs',
+      'findings',
+      'proofs',
+      'trust',
+    ]);
+  });
+
+  it('reveals fatigue when a fatigue-producing action becomes available', () => {
+    const state = {
+      ...createInitialGameState(),
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        logs: 10,
+      }),
+    };
+
+    expect(selectVisibleResources(state).map((resource) => resource.id)).toContain('fatigue');
+  });
+
+  it('shows only the SOC tab at the beginning and reveals more tabs later', () => {
+    const initialState = createInitialGameState();
+    const progressedState = {
+      ...initialState,
+      turn: 140,
+      businessStageId: 'visible_pme' as const,
+      businessMomentum: 10,
+      pendingBusinessEventId: 'launch_marketplace',
+      resources: normalizeResources({
+        ...initialState.resources,
+        logs: 30,
+      }),
+      crisis: {
+        level: 'watch' as const,
+        causes: ['trust_collapse' as const],
+        startedAtTurn: 140,
+        lastEscalationTurn: 140,
+        recoveryProgress: 0,
+      },
+    };
+
+    expect(getVisibleTabs(initialState).map((tab) => tab.id)).toEqual(['soc']);
+    expect(getVisibleTabs(progressedState).map((tab) => tab.id)).toEqual([
+      'soc',
+      'tech',
+      'team',
+      'business',
+      'crisis',
+    ]);
+    expect(isBusinessPanelVisible(progressedState)).toBe(true);
+    expect(isThreatPanelVisible(initialState)).toBe(false);
+  });
 });
 
 describe('getVisibleInfrastructureNodeCount', () => {
   it('returns 1 in the initial state', () => {
     expect(getVisibleInfrastructureNodeCount(createInitialGameState())).toBe(1);
+  });
+
+  it('adds one visible node per unlocked business stage level', () => {
+    const state = {
+      ...createInitialGameState(),
+      businessStageId: 'visible_pme' as const,
+    };
+
+    expect(getVisibleInfrastructureNodeCount(state)).toBe(2);
   });
 
   it('returns 3 for visibility 10 and exposure 10', () => {
@@ -455,5 +587,45 @@ describe('threat selectors', () => {
       outcome: 'major',
       messageKey: 'events.attack.ransomware_minor.major',
     });
+  });
+});
+
+describe('business selectors', () => {
+  it('returns the current stage, next stage and pending event', () => {
+    const state = {
+      ...createInitialGameState(),
+      businessStageId: 'visible_pme' as const,
+      pendingBusinessEventId: 'launch_marketplace',
+    };
+
+    expect(getCurrentBusinessStage(state).id).toBe('visible_pme');
+    expect(getNextBusinessStage(state)?.id).toBe('known_ecommerce');
+    expect(getPendingBusinessEvent(state)?.id).toBe('launch_marketplace');
+  });
+});
+
+describe('crisis selectors', () => {
+  it('exposes the crisis status, causes and available crisis actions', () => {
+    const state = {
+      ...createInitialGameState(),
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        trust: 7,
+        proofs: 25,
+      }),
+      crisis: {
+        level: 'watch' as const,
+        causes: ['trust_collapse' as const],
+        startedAtTurn: 22,
+        lastEscalationTurn: 22,
+        recoveryProgress: 0,
+      },
+    };
+
+    expect(isInCrisis(state)).toBe(true);
+    expect(getCrisisStatusLabelKey(state)).toBe('crisis.status.watch');
+    expect(getCrisisCauseLabelKeys(state)).toEqual(['crisis.cause.trust_collapse']);
+    expect(getAvailableCrisisActions(state).map((crisisAction) => crisisAction.id)).toContain('activate_crisis_cell');
+    expect(canExecuteCrisisAction(state, 'activate_crisis_cell')).toBe(true);
   });
 });

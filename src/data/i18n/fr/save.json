@@ -19,7 +19,9 @@
   "save.error.invalidState": "L’état de jeu contenu dans la sauvegarde est invalide.",
   "save.error.migrationFailed": "La migration de la sauvegarde a échoué.",
   "save.status.autosaved": "Partie sauvegardée automatiquement.",
+  "save.status.saved": "Partie sauvegardée.",
   "save.status.imported": "Sauvegarde importée.",
+  "save.status.restored": "Sauvegarde restaurée et mise à jour.",
   "save.status.exported": "Sauvegarde exportée.",
   "save.status.reset": "Sauvegarde locale réinitialisée.",
   "save.status.modifiedMode": "Partie modifiée"

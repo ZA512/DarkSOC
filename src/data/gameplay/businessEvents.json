@@ -1,0 +1,48 @@
+[
+  {
+    "id": "launch_marketplace",
+    "minimumStageId": "visible_pme",
+    "minimumTurn": 140,
+    "minimumTrust": 18,
+    "triggersOnce": true,
+    "titleKey": "business.events.launch_marketplace.title",
+    "descriptionKey": "business.events.launch_marketplace.description",
+    "choices": [
+      {
+        "id": "accept_without_conditions",
+        "labelKey": "business.events.launch_marketplace.accept_without_conditions.label",
+        "descriptionKey": "business.events.launch_marketplace.accept_without_conditions.description",
+        "effects": {
+          "budget": 300,
+          "exposure": 35,
+          "unknownDebt": 20,
+          "trust": 5
+        },
+        "momentumDelta": 18
+      },
+      {
+        "id": "demand_security_phase",
+        "labelKey": "business.events.launch_marketplace.demand_security_phase.label",
+        "descriptionKey": "business.events.launch_marketplace.demand_security_phase.description",
+        "effects": {
+          "budget": 150,
+          "exposure": 15,
+          "unknownDebt": 10,
+          "trust": -3,
+          "findings": 20
+        },
+        "momentumDelta": 8
+      },
+      {
+        "id": "block_temporarily",
+        "labelKey": "business.events.launch_marketplace.block_temporarily.label",
+        "descriptionKey": "business.events.launch_marketplace.block_temporarily.description",
+        "effects": {
+          "fatigue": 3,
+          "trust": -15
+        },
+        "momentumDelta": -6
+      }
+    ]
+  }
+]

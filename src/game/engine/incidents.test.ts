@@ -46,4 +46,55 @@ describe('applyAttackToState', () => {
     expect(nextState.activeIncidentIds.length).toBeGreaterThan(0);
     expect(nextState.incidentUntilTurn).toBeGreaterThan(nextState.turn);
   });
+
+  it('increments survivedIncidentCount for a partial attack outcome', () => {
+    const attack = getAttackById('phishing_basic');
+    const state = {
+      ...createInitialGameState(),
+      unlockedTechnologyIds: ['phishing_awareness_v0'],
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        visibility: 10,
+      }),
+    };
+
+    const nextState = applyAttackToState(state, attack!);
+
+    expect(nextState.survivedIncidentCount).toBe(1);
+  });
+
+  it('increments survivedIncidentCount for a major attack outcome', () => {
+    const attack = getAttackById('ransomware_minor');
+    const state = {
+      ...createInitialGameState(),
+      turn: 50,
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        knownDebt: 40,
+        unknownDebt: 120,
+        fatigue: 30,
+      }),
+    };
+
+    const nextState = applyAttackToState(state, attack!);
+
+    expect(nextState.survivedIncidentCount).toBe(1);
+  });
+
+  it('does not increment survivedIncidentCount for a blocked attack outcome', () => {
+    const attack = getAttackById('phishing_basic');
+    const state = {
+      ...createInitialGameState(),
+      unlockedTechnologyIds: ['phishing_awareness_v0', 'minimal_siem'],
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        visibility: 40,
+        resilience: 30,
+      }),
+    };
+
+    const nextState = applyAttackToState(state, attack!);
+
+    expect(nextState.survivedIncidentCount).toBe(0);
+  });
 });

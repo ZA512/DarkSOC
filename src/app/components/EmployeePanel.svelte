@@ -3,8 +3,8 @@
   import {
     canAssignEmployeeTask,
     getAvailableTasksForEmployee,
-    getLockedEmployees,
-    getUnlockedEmployees,
+    getVisibleLockedEmployees,
+    getVisibleUnlockedEmployees,
   } from '../../game/engine/selectors';
   import type { GameState } from '../../game/model/GameState';
   import type { Locale } from '../../game/model/Settings';
@@ -17,8 +17,8 @@
 
   let selectedTaskIds: Record<string, string> = {};
 
-  $: unlockedEmployees = getUnlockedEmployees(state);
-  $: lockedEmployees = getLockedEmployees(state);
+  $: unlockedEmployees = getVisibleUnlockedEmployees(state);
+  $: lockedEmployees = getVisibleLockedEmployees(state);
 
   function formatFatigue(value: number): string {
     return `${Math.round(value)} %`;
@@ -54,6 +54,27 @@
     return availableTasks[0]?.id ?? '';
   }
 
+  function getTooltip(employeeId: string): string {
+    const employee = [...unlockedEmployees, ...lockedEmployees].find((candidate) => candidate.id === employeeId);
+
+    if (!employee) {
+      return '';
+    }
+
+    const lines = [t(employee.descriptionKey, locale)];
+    const availableTasks = getAvailableTasksForEmployee(state, employeeId);
+
+    if (availableTasks.length > 0) {
+      lines.push(
+        `${t('employees.availableTasks', locale)}: ${availableTasks
+          .map((task) => t(task.nameKey, locale))
+          .join(' · ')}`,
+      );
+    }
+
+    return lines.join('\n');
+  }
+
   function handleTaskChange(employeeId: string, event: Event): void {
     selectedTaskIds = {
       ...selectedTaskIds,
@@ -72,88 +93,80 @@
   }
 </script>
 
-<section class="employee-panel" aria-labelledby="employee-title">
-  <h2 id="employee-title">{t('employees.title', locale)}</h2>
+<section class="employee-panel stage-panel" aria-labelledby="employee-title">
+  <div class="stage-panel__header">
+    <div>
+      <p class="stage-panel__kicker">{t('ui.tab.soc', locale)}</p>
+      <h2 id="employee-title">{t('employees.title', locale)}</h2>
+    </div>
+  </div>
 
-  <div class="employee-panel__section">
-    {#each unlockedEmployees as employee (employee.id)}
-      <article class="employee-card">
-        <div class="employee-card__header">
-          <div>
-            <h3>{t(employee.nameKey, locale)}</h3>
-            <p>{t(employee.descriptionKey, locale)}</p>
+  <div class="list-section">
+    <ul class="employee-list">
+      {#each unlockedEmployees as employee (employee.id)}
+        <li class="employee-row" title={getTooltip(employee.id)}>
+          <div class="employee-row__identity">
+            <strong>{t(employee.nameKey, locale)}</strong>
+            <span>{t(getRoleKey(employee.role), locale)}</span>
           </div>
 
-          <span class={`employee-card__status employee-card__status--${getEmployeeStatus(employee)}`}>
-            {t(getStatusKey(employee.id), locale)}
-          </span>
-        </div>
+          <div class="employee-row__task">{getCurrentTaskLabel(employee.assignedTaskId)}</div>
 
-        <p class="employee-card__meta">
-          <span class="employee-card__meta-label">{t(getRoleKey(employee.role), locale)}</span>
-          <span>{t('employees.fatigue', locale)}: {formatFatigue(employee.fatigue)}</span>
-        </p>
+          <div class="employee-row__fatigue">{t('employees.fatigue', locale)} {formatFatigue(employee.fatigue)}</div>
 
-        <p class="employee-card__task">
-          <span class="employee-card__task-label">{t('employees.currentTask', locale)}</span>
-          <span>{getCurrentTaskLabel(employee.assignedTaskId)}</span>
-        </p>
+          <div class="employee-row__status">{t(getStatusKey(employee.id), locale)}</div>
 
-        {#if getAvailableTasksForEmployee(state, employee.id).length > 0}
-          <div class="employee-card__controls">
-            <select
-              class="employee-card__select"
-              value={getSelectedTaskId(employee.id)}
-              onchange={(event) => handleTaskChange(employee.id, event)}
-            >
-              {#each getAvailableTasksForEmployee(state, employee.id) as task (task.id)}
-                <option value={task.id}>{t(task.nameKey, locale)}</option>
-              {/each}
-            </select>
+          {#if getAvailableTasksForEmployee(state, employee.id).length > 0}
+            <div class="employee-row__controls">
+              <select
+                class="employee-row__select"
+                value={getSelectedTaskId(employee.id)}
+                onchange={(event) => handleTaskChange(employee.id, event)}
+              >
+                {#each getAvailableTasksForEmployee(state, employee.id) as task (task.id)}
+                  <option value={task.id}>{t(task.nameKey, locale)}</option>
+                {/each}
+              </select>
 
-            <button
-              type="button"
-              class="employee-card__button"
-              disabled={!canAssignEmployeeTask(state, employee.id, getSelectedTaskId(employee.id))}
-              onclick={() => handleAssign(employee.id)}
-            >
-              {t('employees.assign', locale)}
-            </button>
+              <button
+                type="button"
+                class="data-row__button"
+                disabled={!canAssignEmployeeTask(state, employee.id, getSelectedTaskId(employee.id))}
+                onclick={() => handleAssign(employee.id)}
+              >
+                {t('employees.assign', locale)}
+              </button>
 
-            <button
-              type="button"
-              class="employee-card__button"
-              disabled={!employee.assignedTaskId}
-              onclick={() => onUnassign(employee.id)}
-            >
-              {t('employees.unassign', locale)}
-            </button>
-          </div>
-        {:else}
-          <p class="employee-card__empty">{t('employees.availableTasks', locale)}: {t('employees.currentTask.none', locale)}</p>
-        {/if}
-      </article>
-    {/each}
+              <button
+                type="button"
+                class="data-row__button data-row__button--ghost"
+                disabled={!employee.assignedTaskId}
+                onclick={() => onUnassign(employee.id)}
+              >
+                {t('employees.unassign', locale)}
+              </button>
+            </div>
+          {/if}
+        </li>
+      {/each}
+    </ul>
   </div>
 
   {#if lockedEmployees.length > 0}
-    <div class="employee-panel__section">
-      <p class="employee-panel__section-title">{t('employees.locked', locale)}</p>
+    <div class="list-section">
+      <p class="list-section__title">{t('employees.locked', locale)}</p>
 
-      {#each lockedEmployees as employee (employee.id)}
-        <article class="employee-card employee-card--locked">
-          <div class="employee-card__header">
-            <div>
-              <h3>{t(employee.nameKey, locale)}</h3>
-              <p>{t(employee.descriptionKey, locale)}</p>
+      <ul class="employee-list employee-list--locked">
+        {#each lockedEmployees as employee (employee.id)}
+          <li class="employee-row employee-row--locked" title={getTooltip(employee.id)}>
+            <div class="employee-row__identity">
+              <strong>{t(employee.nameKey, locale)}</strong>
+              <span>{t(getRoleKey(employee.role), locale)}</span>
             </div>
-
-            <span class="employee-card__status employee-card__status--locked">
-              {t('employees.status.locked', locale)}
-            </span>
-          </div>
-        </article>
-      {/each}
+            <span class="data-row__status">{t('employees.status.locked', locale)}</span>
+          </li>
+        {/each}
+      </ul>
     </div>
   {/if}
 </section>

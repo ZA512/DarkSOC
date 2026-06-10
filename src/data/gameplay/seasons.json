@@ -1,0 +1,15 @@
+[
+  {
+    "id": "season_1_visibility",
+    "titleKey": "seasons.season_1_visibility.title",
+    "descriptionKey": "seasons.season_1_visibility.description",
+    "completionMessageKey": "seasons.season_1_visibility.completion",
+    "requiredObjectiveIds": [
+      "reach_visibility_30",
+      "reach_trust_30",
+      "unlock_four_technologies",
+      "survive_one_incident",
+      "reach_resilience_10"
+    ]
+  }
+]

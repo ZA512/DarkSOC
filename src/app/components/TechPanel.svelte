@@ -1,11 +1,11 @@
 <script lang="ts">
   import {
     canBuyTechnology,
-    getAvailableTechnologies,
-    getLockedTechnologies,
+    getVisibleAvailableTechnologies,
+    getVisibleLockedTechnologies,
     getTechnologyMissingRequirements,
     getTechnologyMissingResources,
-    getUnlockedTechnologies,
+    getVisibleUnlockedTechnologies,
   } from '../../game/engine/selectors';
   import type { GameState } from '../../game/model/GameState';
   import type { Technology } from '../../game/model/Technology';
@@ -16,9 +16,9 @@
   export let locale: Locale = 'fr';
   export let onBuy: (technologyId: string) => void;
 
-  $: unlockedTechnologies = getUnlockedTechnologies(state);
-  $: availableTechnologies = getAvailableTechnologies(state);
-  $: lockedTechnologies = getLockedTechnologies(state);
+  $: unlockedTechnologies = getVisibleUnlockedTechnologies(state);
+  $: availableTechnologies = getVisibleAvailableTechnologies(state);
+  $: lockedTechnologies = getVisibleLockedTechnologies(state);
 
   function formatTechnologyName(technologyId: string): string {
     return t(`technologies.${technologyId}.name`, locale);
@@ -27,6 +27,22 @@
   function formatResourceList(entries: Array<[string, number]>): string {
     return entries.map(([resourceId, amount]) => `${t(`resources.${resourceId}`, locale)}: ${amount}`).join(' • ');
   }
+
+   function formatEffectLabel(effectId: string): string {
+     const resourceLabel = t(`resources.${effectId}`, locale);
+
+     if (!resourceLabel.startsWith('[')) {
+       return resourceLabel;
+     }
+
+     return t(`stats.${effectId}`, locale);
+   }
+
+   function formatEffects(technology: Technology): string {
+     return Object.entries(technology.effects)
+       .map(([effectId, amount]) => `${formatEffectLabel(effectId)} ${amount > 0 ? '+' : ''}${Math.round(amount)}`)
+       .join(' · ');
+   }
 
   function formatCost(technology: Technology): string {
     return formatResourceList(Object.entries(technology.cost) as Array<[string, number]>);
@@ -59,107 +75,92 @@
 
     return 'tech.insufficientResources';
   }
+
+  function getTooltip(technology: Technology): string {
+    const lines = [t(`technologies.${technology.id}.description`, locale)];
+
+    lines.push(`${t('tech.cost', locale)}: ${formatCost(technology)}`);
+
+    if (Object.keys(technology.effects).length > 0) {
+      lines.push(`${t('ui.tooltip.effects', locale)}: ${formatEffects(technology)}`);
+    }
+
+    if (getTechnologyMissingRequirements(state, technology.id).length > 0) {
+      lines.push(`${t('tech.requires', locale)}: ${formatRequirements(technology.id)}`);
+    }
+
+    if (!canBuyTechnology(state, technology.id) && getTechnologyMissingResources(technology.id)) {
+      const missingResources = formatMissingResources(technology.id);
+
+      if (missingResources.length > 0) {
+        lines.push(`${t('tech.insufficientResources', locale)}: ${missingResources}`);
+      }
+    }
+
+    return lines.join('\n');
+  }
 </script>
 
-<section class="tech-panel" aria-labelledby="tech-title">
-  <h2 id="tech-title">{t('tech.title', locale)}</h2>
+<section class="tech-panel stage-panel" aria-labelledby="tech-title">
+  <div class="stage-panel__header">
+    <div>
+      <p class="stage-panel__kicker">{t('ui.tab.soc', locale)}</p>
+      <h2 id="tech-title">{t('tech.title', locale)}</h2>
+    </div>
+  </div>
 
   {#if availableTechnologies.length > 0}
-    <div class="tech-panel__section">
-      <p class="tech-panel__section-title">{t('tech.available', locale)}</p>
+    <div class="list-section">
+      <p class="list-section__title">{t('tech.available', locale)}</p>
 
-      {#each availableTechnologies as technology (technology.id)}
-        <article class="tech-card">
-          <div class="tech-card__header">
-            <div>
-              <h3>{formatTechnologyName(technology.id)}</h3>
-              <p>{t(`technologies.${technology.id}.description`, locale)}</p>
-            </div>
-
-            <span class="tech-card__status tech-card__status--available">
-              {t(getStatusKey(technology), locale)}
-            </span>
-          </div>
-
-          <p class="tech-card__meta">
-            <span class="tech-card__meta-label">{t('tech.cost', locale)}</span>
-            <span>{formatCost(technology)}</span>
-          </p>
-
-          {#if !canBuyTechnology(state, technology.id)}
-            <p class="tech-card__hint">
-              <span class="tech-card__meta-label">{t('tech.insufficientResources', locale)}</span>
-              <span>{formatMissingResources(technology.id)}</span>
-            </p>
-          {/if}
-
-          <button
-            type="button"
-            class="tech-card__button"
-            disabled={!canBuyTechnology(state, technology.id)}
-            onclick={() => onBuy(technology.id)}
-          >
-            {t('tech.buy', locale)}
-          </button>
-        </article>
-      {/each}
+      <ul class="data-list">
+        {#each availableTechnologies as technology (technology.id)}
+          <li class="data-row" title={getTooltip(technology)}>
+            <span class="data-row__name">{formatTechnologyName(technology.id)}</span>
+            <span class="data-row__meta">{formatCost(technology)}</span>
+            <button
+              type="button"
+              class="data-row__button"
+              disabled={!canBuyTechnology(state, technology.id)}
+              onclick={() => onBuy(technology.id)}
+            >
+              {t('tech.buy', locale)}
+            </button>
+          </li>
+        {/each}
+      </ul>
     </div>
   {/if}
 
   {#if lockedTechnologies.length > 0}
-    <div class="tech-panel__section">
-      <p class="tech-panel__section-title">{t('tech.locked', locale)}</p>
+    <div class="list-section">
+      <p class="list-section__title">{t('tech.locked', locale)}</p>
 
-      {#each lockedTechnologies as technology (technology.id)}
-        <article class="tech-card tech-card--locked">
-          <div class="tech-card__header">
-            <div>
-              <h3>{formatTechnologyName(technology.id)}</h3>
-              <p>{t(`technologies.${technology.id}.description`, locale)}</p>
-            </div>
-
-            <span class="tech-card__status tech-card__status--locked">{t('tech.locked', locale)}</span>
-          </div>
-
-          <p class="tech-card__meta">
-            <span class="tech-card__meta-label">{t('tech.cost', locale)}</span>
-            <span>{formatCost(technology)}</span>
-          </p>
-
-          {#if getTechnologyMissingRequirements(state, technology.id).length > 0}
-            <p class="tech-card__hint">
-              <span class="tech-card__meta-label">{t('tech.requires', locale)}</span>
-              <span>{formatRequirements(technology.id)}</span>
-            </p>
-          {/if}
-        </article>
-      {/each}
+      <ul class="data-list">
+        {#each lockedTechnologies as technology (technology.id)}
+          <li class="data-row data-row--muted" title={getTooltip(technology)}>
+            <span class="data-row__name">{formatTechnologyName(technology.id)}</span>
+            <span class="data-row__meta">{formatCost(technology)}</span>
+            <span class="data-row__status">{t('tech.locked', locale)}</span>
+          </li>
+        {/each}
+      </ul>
     </div>
   {/if}
 
   {#if unlockedTechnologies.length > 0}
-    <div class="tech-panel__section">
-      <p class="tech-panel__section-title">{t('tech.unlocked', locale)}</p>
+    <div class="list-section">
+      <p class="list-section__title">{t('tech.unlocked', locale)}</p>
 
-      {#each unlockedTechnologies as technology (technology.id)}
-        <article class="tech-card tech-card--unlocked">
-          <div class="tech-card__header">
-            <div>
-              <h3>{formatTechnologyName(technology.id)}</h3>
-              <p>{t(`technologies.${technology.id}.description`, locale)}</p>
-            </div>
-
-            <span class="tech-card__status tech-card__status--unlocked">
-              {t('tech.unlocked', locale)}
-            </span>
-          </div>
-
-          <p class="tech-card__meta">
-            <span class="tech-card__meta-label">{t('tech.cost', locale)}</span>
-            <span>{formatCost(technology)}</span>
-          </p>
-        </article>
-      {/each}
+      <ul class="data-list">
+        {#each unlockedTechnologies as technology (technology.id)}
+          <li class="data-row" title={getTooltip(technology)}>
+            <span class="data-row__name">{formatTechnologyName(technology.id)}</span>
+            <span class="data-row__meta">{formatEffects(technology)}</span>
+            <span class="data-row__status data-row__status--strong">{t('tech.unlocked', locale)}</span>
+          </li>
+        {/each}
+      </ul>
     </div>
   {/if}
 </section>

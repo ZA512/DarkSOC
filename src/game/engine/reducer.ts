@@ -1,6 +1,20 @@
 import type { GameAction } from './actions';
+import { applyBusinessChoice, processBusinessTurn } from './business';
+import {
+  applyCrisisTick,
+  applyCrisisTransitionNarrative,
+  executeCrisisAction,
+  synchronizeCrisisState,
+} from './crisis';
 import { applyEmployeeTick, applyEmployeeUnlocks } from './employees';
-import { canAffordManualAction, getManualActionDefinition, getManualActionDelta } from './manualActions';
+import { evaluateObjectives } from './objectives';
+import { evaluateSeasonCompletion } from './seasons';
+import {
+  canAffordManualAction,
+  getManualActionCostDelta,
+  getManualActionDefinition,
+  getManualActionEffectDelta,
+} from './manualActions';
 import { getPassiveResourceDelta, getTechnologyDefinition, getTechnologyPurchaseDelta } from './technologies';
 import { processThreatTurn } from './incidents';
 import {
@@ -54,8 +68,8 @@ function appendNarrativeEntry(state: GameState, messageKey: string, key: string)
   };
 }
 
-function completeRunningAction(state: GameState): GameState {
-  const runningAction = state.runningAction;
+function completeRunningAction(state: GameState, actionId: GameState['runningActions'][number]['id']): GameState {
+  const runningAction = state.runningActions.find((candidate) => candidate.id === actionId);
 
   if (!runningAction) {
     return state;
@@ -63,12 +77,12 @@ function completeRunningAction(state: GameState): GameState {
 
   const nextState = {
     ...state,
-    resources: applyResourceDelta(state.resources, getManualActionDelta(runningAction.id)),
+    resources: applyResourceDelta(state.resources, getManualActionEffectDelta(runningAction.id)),
     flags: {
       ...state.flags,
       [`action_${runningAction.id}_used`]: true,
     },
-    runningAction: undefined,
+    runningActions: state.runningActions.filter((candidate) => candidate.id !== actionId),
   };
 
   return appendNarrativeEntry(
@@ -103,7 +117,26 @@ function completeTechnologyPurchase(state: GameState, technologyId: string): Gam
     `tech_${technologyId}_unlocked`,
   );
 
-  return applyEmployeeUnlocks(applyNarrativeThresholds(withNarrative));
+  return applyEmployeeUnlocks(withNarrative);
+}
+
+function finalizeCrisisState(state: GameState, previousLevel: GameState['crisis']['level']): GameState {
+  const nextState = synchronizeCrisisState(state);
+  const withResolvedCount =
+    previousLevel === 'recovery' && nextState.crisis.level === 'none'
+      ? {
+          ...nextState,
+          resolvedCrisisCount: nextState.resolvedCrisisCount + 1,
+        }
+      : nextState;
+
+  return applyCrisisTransitionNarrative(withResolvedCount, previousLevel);
+}
+
+function applyProgressionState(state: GameState, previousCrisisLevel: GameState['crisis']['level']): GameState {
+  return applyNarrativeThresholds(
+    evaluateSeasonCompletion(evaluateObjectives(finalizeCrisisState(state, previousCrisisLevel))),
+  );
 }
 
 export function applyNarrativeThresholds(state: GameState): GameState {
@@ -130,7 +163,7 @@ export function applyNarrativeThresholds(state: GameState): GameState {
 export function applyAction(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'START_MANUAL_ACTION': {
-      if (state.runningAction) {
+      if (state.runningActions.some((runningAction) => runningAction.id === action.actionId)) {
         return state;
       }
 
@@ -146,17 +179,49 @@ export function applyAction(state: GameState, action: GameAction): GameState {
 
       return {
         ...state,
-        runningAction: {
-          id: action.actionId,
-          startedAtTurn: state.turn,
-          remainingMs: definition.durationMs,
-          durationMs: definition.durationMs,
-        },
+        resources: applyResourceDelta(state.resources, getManualActionCostDelta(action.actionId)),
+        runningActions: [
+          ...state.runningActions,
+          {
+            id: action.actionId,
+            startedAtTurn: state.turn,
+            remainingMs: definition.durationMs,
+            durationMs: definition.durationMs,
+          },
+        ],
       };
     }
 
     case 'BUY_TECHNOLOGY':
-      return completeTechnologyPurchase(state, action.technologyId);
+      return completeTechnologyPurchase(state, action.technologyId) === state
+        ? state
+        : applyProgressionState(completeTechnologyPurchase(state, action.technologyId), state.crisis.level);
+
+    case 'CHOOSE_BUSINESS_OPTION':
+      return applyBusinessChoice(state, action.eventId, action.choiceId) === state
+        ? state
+        : applyProgressionState(applyBusinessChoice(state, action.eventId, action.choiceId), state.crisis.level);
+
+    case 'EXECUTE_CRISIS_ACTION':
+      return executeCrisisAction(state, action.crisisActionId) === state
+        ? state
+        : applyProgressionState(executeCrisisAction(state, action.crisisActionId), state.crisis.level);
+
+    case 'DISMISS_ONBOARDING':
+      return state.showOnboarding
+        ? {
+            ...state,
+            showOnboarding: false,
+          }
+        : state;
+
+    case 'DISMISS_SEASON_SUMMARY':
+      return state.showSeasonSummary
+        ? {
+            ...state,
+            showSeasonSummary: false,
+          }
+        : state;
 
     case 'ASSIGN_EMPLOYEE_TASK': {
       if (!canAssignEmployeeTask(state, action.employeeId, action.taskId)) {
@@ -211,7 +276,12 @@ export function applyAction(state: GameState, action: GameAction): GameState {
     }
 
     case 'COMPLETE_RUNNING_ACTION':
-      return applyEmployeeUnlocks(applyNarrativeThresholds(completeRunningAction(state)));
+      return completeRunningAction(state, action.actionId) === state
+        ? state
+        : applyProgressionState(
+            applyEmployeeUnlocks(completeRunningAction(state, action.actionId)),
+            state.crisis.level,
+          );
 
     case 'UPDATE_SETTINGS': {
       const nextSettings = {
@@ -240,41 +310,19 @@ export function applyAction(state: GameState, action: GameAction): GameState {
         return state;
       }
 
+      const previousCrisisLevel = state.crisis.level;
       const passiveDelta = getPassiveResourceDelta(getEffectiveStats(state), deltaMs);
-      const nextState = applyEmployeeUnlocks(applyEmployeeTick({
+      const tickState = {
         ...state,
         turn: state.turn + 1,
         resources: hasResourceDelta(passiveDelta)
           ? applyResourceDelta(state.resources, passiveDelta)
           : state.resources,
-      }, deltaMs));
-      const runningAction = nextState.runningAction;
+      };
+      const baseTickState = synchronizeCrisisState(applyEmployeeUnlocks(applyEmployeeTick(tickState, deltaMs)));
+      const nextState = processBusinessTurn(applyCrisisTick(baseTickState, deltaMs));
 
-      if (!runningAction) {
-        return applyNarrativeThresholds(processThreatTurn(nextState));
-      }
-
-      const remainingMs = runningAction.remainingMs - deltaMs;
-
-      if (remainingMs > 0) {
-        const inProgressState = {
-          ...nextState,
-          runningAction: {
-            ...runningAction,
-            remainingMs,
-          },
-        };
-
-        return applyNarrativeThresholds(processThreatTurn(inProgressState));
-      }
-
-      return applyNarrativeThresholds(processThreatTurn(applyEmployeeUnlocks(completeRunningAction({
-        ...nextState,
-        runningAction: {
-          ...runningAction,
-          remainingMs: 0,
-        },
-      }))));
+      return applyProgressionState(processThreatTurn(nextState), previousCrisisLevel);
     }
 
     case 'RESET_GAME':

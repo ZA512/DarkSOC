@@ -15,66 +15,61 @@
   }
 </script>
 
-<section class="threat-panel" aria-labelledby="threat-title">
-  <h2 id="threat-title">{t('threat.title', locale)}</h2>
-
-  <div class="threat-panel__metrics">
-    <article class="threat-panel__metric">
-      <span class="threat-panel__metric-label">{t('threat.pressure', locale)}</span>
-      <strong class="threat-panel__metric-value">{threatPressure}</strong>
-    </article>
-
-    <article class="threat-panel__metric">
-      <span class="threat-panel__metric-label">{t('threat.maturity', locale)}</span>
-      <strong class="threat-panel__metric-value">{cyberMaturity}</strong>
-    </article>
-
-    <article class="threat-panel__metric">
-      <span class="threat-panel__metric-label">{t('threat.stage', locale)}</span>
-      <strong class="threat-panel__metric-value">{t(businessStageNameKey, locale)}</strong>
-    </article>
+<section class="threat-panel stage-panel" aria-labelledby="threat-title">
+  <div class="stage-panel__header">
+    <div>
+      <p class="stage-panel__kicker">{t('ui.tab.soc', locale)}</p>
+      <h2 id="threat-title">{t('threat.title', locale)}</h2>
+    </div>
   </div>
 
-  <div class="threat-panel__section">
-    <span class="threat-panel__section-label">{t('threat.lastEvent', locale)}</span>
+  <dl class="stat-strip">
+    <div>
+      <dt>{t('threat.pressure', locale)}</dt>
+      <dd>{threatPressure}</dd>
+    </div>
+    <div>
+      <dt>{t('threat.maturity', locale)}</dt>
+      <dd>{cyberMaturity}</dd>
+    </div>
+    <div>
+      <dt>{t('threat.stage', locale)}</dt>
+      <dd>{t(businessStageNameKey, locale)}</dd>
+    </div>
+  </dl>
+
+  <div class="list-section">
+    <p class="list-section__title">{t('threat.lastEvent', locale)}</p>
 
     {#if lastThreatEvent}
-      <article class="threat-panel__event">
-        <div class="threat-panel__event-header">
-          <span class="threat-panel__event-kind">
+      <div class="signal-row" title={t(lastThreatEvent.messageKey, locale)}>
+        <span class="signal-row__kind">
             {t(lastThreatEvent.kind === 'warning' ? 'threat.warning' : 'threat.attack', locale)}
-          </span>
-          {#if lastThreatEvent.outcome}
-            <span class="threat-panel__incident-count">
-              {t(`attacks.outcome.${lastThreatEvent.outcome}`, locale)}
-            </span>
-          {/if}
-        </div>
-
-        <div class="threat-panel__event-title">{formatAttackName(lastThreatEvent.attackId)}</div>
-        <p class="threat-panel__event-text">{t(lastThreatEvent.messageKey, locale)}</p>
-      </article>
+        </span>
+        <span class="signal-row__name">{formatAttackName(lastThreatEvent.attackId)}</span>
+        {#if lastThreatEvent.outcome}
+          <span class="signal-row__badge">{t(`attacks.outcome.${lastThreatEvent.outcome}`, locale)}</span>
+        {/if}
+      </div>
     {:else}
-      <p class="threat-panel__empty">{t('threat.none', locale)}</p>
+      <p class="stage-panel__note">{t('threat.none', locale)}</p>
     {/if}
   </div>
 
-  <div class="threat-panel__section">
-    <span class="threat-panel__section-label">{t('threat.activeIncidents', locale)}</span>
+  <div class="list-section">
+    <p class="list-section__title">{t('threat.activeIncidents', locale)}</p>
 
     {#if activeIncidents.length > 0}
-      <ol class="threat-panel__incident-list">
+      <ol class="data-list data-list--compact">
         {#each activeIncidents as incident (incident.attackId)}
-          <li class="threat-panel__incident">
-            <div class="threat-panel__incident-header">
-              <span class="threat-panel__incident-title">{formatAttackName(incident.attackId)}</span>
-              <span class="threat-panel__incident-count">x{incident.count}</span>
-            </div>
+          <li class="data-row data-row--compact">
+            <span class="data-row__name">{formatAttackName(incident.attackId)}</span>
+            <span class="data-row__status">x{incident.count}</span>
           </li>
         {/each}
       </ol>
     {:else}
-      <p class="threat-panel__empty">{t('threat.none', locale)}</p>
+      <p class="stage-panel__note">{t('threat.none', locale)}</p>
     {/if}
   </div>
 </section>

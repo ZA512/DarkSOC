@@ -1,0 +1,93 @@
+[
+  {
+    "id": "activate_crisis_cell",
+    "availableInLevels": ["watch", "active", "severe"],
+    "cost": {
+      "proofs": 20
+    },
+    "effects": {
+      "recoveryProgress": 20,
+      "fatigue": 5,
+      "trust": 3
+    },
+    "labelKey": "crisis.action.activate_crisis_cell.label",
+    "descriptionKey": "crisis.action.activate_crisis_cell.description",
+    "narrativeKey": "events.crisis.activate_crisis_cell"
+  },
+  {
+    "id": "freeze_risky_projects",
+    "availableInLevels": ["watch", "active", "severe"],
+    "cost": {
+      "trust": 5
+    },
+    "effects": {
+      "businessMomentum": -25,
+      "exposure": -5,
+      "recoveryProgress": 15
+    },
+    "labelKey": "crisis.action.freeze_risky_projects.label",
+    "descriptionKey": "crisis.action.freeze_risky_projects.description",
+    "narrativeKey": "events.crisis.freeze_risky_projects"
+  },
+  {
+    "id": "emergency_comex_briefing",
+    "availableInLevels": ["active", "severe"],
+    "cost": {
+      "proofs": 30,
+      "findings": 20
+    },
+    "effects": {
+      "trust": 10,
+      "recoveryProgress": 15
+    },
+    "labelKey": "crisis.action.emergency_comex_briefing.label",
+    "descriptionKey": "crisis.action.emergency_comex_briefing.description",
+    "narrativeKey": "events.crisis.emergency_comex_briefing"
+  },
+  {
+    "id": "emergency_remediation",
+    "availableInLevels": ["active", "severe"],
+    "cost": {
+      "budget": 100,
+      "findings": 30
+    },
+    "effects": {
+      "knownDebt": -25,
+      "fatigue": 10,
+      "recoveryProgress": 20
+    },
+    "labelKey": "crisis.action.emergency_remediation.label",
+    "descriptionKey": "crisis.action.emergency_remediation.description",
+    "narrativeKey": "events.crisis.emergency_remediation"
+  },
+  {
+    "id": "temporary_external_support",
+    "availableInLevels": ["active", "severe"],
+    "cost": {
+      "budget": 250
+    },
+    "effects": {
+      "fatigue": -20,
+      "recoveryProgress": 25,
+      "trust": 3
+    },
+    "labelKey": "crisis.action.temporary_external_support.label",
+    "descriptionKey": "crisis.action.temporary_external_support.description",
+    "narrativeKey": "events.crisis.temporary_external_support"
+  },
+  {
+    "id": "restore_operational_calm",
+    "availableInLevels": ["recovery"],
+    "cost": {
+      "budget": 50
+    },
+    "effects": {
+      "fatigue": -15,
+      "trust": 5,
+      "businessMomentum": -5
+    },
+    "labelKey": "crisis.action.restore_operational_calm.label",
+    "descriptionKey": "crisis.action.restore_operational_calm.description",
+    "narrativeKey": "events.crisis.restore_operational_calm"
+  }
+]

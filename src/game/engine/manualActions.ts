@@ -47,16 +47,38 @@ export function canAffordManualAction(resources: Resources, actionId: ManualActi
   return true;
 }
 
-export function getManualActionDelta(actionId: ManualActionId): ResourceDelta {
-  const { cost, effect } = getManualActionDefinition(actionId);
+export function getManualActionCostDelta(actionId: ManualActionId): ResourceDelta {
+  const { cost } = getManualActionDefinition(actionId);
+  const delta: ResourceDelta = {};
+
+  for (const [resourceId, amount] of Object.entries(cost) as [ResourceId, number][]) {
+    delta[resourceId] = (delta[resourceId] ?? 0) - amount;
+  }
+
+  return delta;
+}
+
+export function getManualActionEffectDelta(actionId: ManualActionId): ResourceDelta {
+  const { effect } = getManualActionDefinition(actionId);
   const delta: ResourceDelta = {};
 
   for (const [resourceId, amount] of Object.entries(effect) as [ResourceId, number][]) {
     delta[resourceId] = (delta[resourceId] ?? 0) + amount;
   }
 
-  for (const [resourceId, amount] of Object.entries(cost) as [ResourceId, number][]) {
-    delta[resourceId] = (delta[resourceId] ?? 0) - amount;
+  return delta;
+}
+
+export function getManualActionDelta(actionId: ManualActionId): ResourceDelta {
+  const delta: ResourceDelta = {
+    ...getManualActionEffectDelta(actionId),
+  };
+
+  for (const [resourceId, amount] of Object.entries(getManualActionCostDelta(actionId)) as [
+    ResourceId,
+    number,
+  ][]) {
+    delta[resourceId] = (delta[resourceId] ?? 0) + amount;
   }
 
   return delta;

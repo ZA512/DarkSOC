@@ -2,11 +2,56 @@
   {
     "id": "small_company",
     "level": 1,
-    "nameKey": "business.stage.small_company"
+    "nameKey": "business.stage.small_company",
+    "descriptionKey": "business.stage.small_company.description",
+    "baseExposure": 10,
+    "budgetBonus": 0,
+    "attackPressureModifier": 1,
+    "minimumTurn": 0,
+    "minimumTrust": 0
   },
   {
     "id": "visible_pme",
     "level": 2,
-    "nameKey": "business.stage.visible_pme"
+    "nameKey": "business.stage.visible_pme",
+    "descriptionKey": "business.stage.visible_pme.description",
+    "baseExposure": 25,
+    "budgetBonus": 100,
+    "attackPressureModifier": 1.08,
+    "minimumTurn": 120,
+    "minimumTrust": 15
+  },
+  {
+    "id": "known_ecommerce",
+    "level": 3,
+    "nameKey": "business.stage.known_ecommerce",
+    "descriptionKey": "business.stage.known_ecommerce.description",
+    "baseExposure": 50,
+    "budgetBonus": 300,
+    "attackPressureModifier": 1.18,
+    "minimumTurn": 300,
+    "minimumTrust": 30
+  },
+  {
+    "id": "international_group",
+    "level": 4,
+    "nameKey": "business.stage.international_group",
+    "descriptionKey": "business.stage.international_group.description",
+    "baseExposure": 80,
+    "budgetBonus": 600,
+    "attackPressureModifier": 1.32,
+    "minimumTurn": 600,
+    "minimumTrust": 45
+  },
+  {
+    "id": "major_target",
+    "level": 5,
+    "nameKey": "business.stage.major_target",
+    "descriptionKey": "business.stage.major_target.description",
+    "baseExposure": 120,
+    "budgetBonus": 1000,
+    "attackPressureModifier": 1.5,
+    "minimumTurn": 1000,
+    "minimumTrust": 60
   }
 ]

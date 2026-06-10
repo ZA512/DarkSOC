@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, applyNarrativeThresholds } from './reducer';
+import { getManualActionDefinition } from './manualActions';
 import { createInitialGameState } from '../model/GameState';
 import { normalizeResources } from '../model/Resource';
 
@@ -11,15 +12,18 @@ describe('applyAction', () => {
       type: 'START_MANUAL_ACTION',
       actionId: 'collect_logs',
     });
+    const collectLogsDefinition = getManualActionDefinition('collect_logs');
 
     expect(nextState).not.toBe(state);
-    expect(nextState.runningAction).toEqual({
-      id: 'collect_logs',
-      startedAtTurn: 0,
-      remainingMs: 2500,
-      durationMs: 2500,
-    });
-    expect(state.runningAction).toBeUndefined();
+    expect(nextState.runningActions).toEqual([
+      {
+        id: 'collect_logs',
+        startedAtTurn: 0,
+        remainingMs: collectLogsDefinition.durationMs,
+        durationMs: collectLogsDefinition.durationMs,
+      },
+    ]);
+    expect(state.runningActions).toEqual([]);
   });
 
   it('refuses to start an unavailable action', () => {
@@ -33,7 +37,7 @@ describe('applyAction', () => {
     expect(nextState).toBe(state);
   });
 
-  it('refuses to start a second action while one is already running', () => {
+  it('refuses to start the same action while it is already running', () => {
     const state = applyAction(createInitialGameState(), {
       type: 'START_MANUAL_ACTION',
       actionId: 'collect_logs',
@@ -47,42 +51,69 @@ describe('applyAction', () => {
     expect(nextState).toBe(state);
   });
 
-  it('reduces remaining time while an action is running', () => {
-    const state = applyAction(createInitialGameState(), {
+  it('allows starting a different action while one is already running', () => {
+    const baseState = {
+      ...createInitialGameState(),
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        logs: 10,
+      }),
+    };
+    const state = applyAction(baseState, {
       type: 'START_MANUAL_ACTION',
       actionId: 'collect_logs',
     });
 
-    const nextState = applyAction(state, { type: 'TICK', deltaMs: 500 });
+    const nextState = applyAction(state, {
+      type: 'START_MANUAL_ACTION',
+      actionId: 'analyze_alert',
+    });
 
-    expect(nextState.runningAction?.remainingMs).toBe(2000);
+    expect(nextState.runningActions.map((runningAction) => runningAction.id)).toEqual([
+      'collect_logs',
+      'analyze_alert',
+    ]);
     expect(nextState.resources.logs).toBe(0);
   });
 
-  it('completes a running action, applies effects, normalizes resources and adds a narrative entry', () => {
+  it('completes a targeted running action, applies its effects and keeps the others active', () => {
     const state = createInitialGameState();
     const readyState = {
       ...state,
       resources: normalizeResources({
         ...state.resources,
         logs: 10,
-        fatigue: 100,
+        fatigue: 68,
       }),
     };
     const runningState = applyAction(readyState, {
       type: 'START_MANUAL_ACTION',
       actionId: 'analyze_alert',
     });
+    const withSecondAction = applyAction(runningState, {
+      type: 'START_MANUAL_ACTION',
+      actionId: 'collect_logs',
+    });
 
-    const nextState = applyAction(runningState, { type: 'TICK', deltaMs: 3500 });
+    const nextState = applyAction(withSecondAction, {
+      type: 'COMPLETE_RUNNING_ACTION',
+      actionId: 'analyze_alert',
+    });
 
-    expect(nextState.runningAction).toBeUndefined();
+    expect(nextState.runningActions).toEqual([
+      {
+        id: 'collect_logs',
+        startedAtTurn: 0,
+        remainingMs: getManualActionDefinition('collect_logs').durationMs,
+        durationMs: getManualActionDefinition('collect_logs').durationMs,
+      },
+    ]);
     expect(nextState.resources.logs).toBe(0);
     expect(nextState.resources.findings).toBe(5);
-    expect(nextState.resources.fatigue).toBe(100);
-    expect(nextState.turn).toBe(1);
+    expect(nextState.resources.fatigue).toBe(69);
+    expect(nextState.turn).toBe(0);
     expect(nextState.narrativeLog.at(-1)).toEqual({
-      id: 'action_analyze_alert_completed_1_1',
+      id: 'action_analyze_alert_completed_0_1',
       messageKey: 'events.action.analyze_alert.completed',
     });
   });
@@ -100,6 +131,129 @@ describe('applyAction', () => {
     expect(nextState).not.toBe(state);
     expect(nextState.settings.animationMode).toBe('off');
     expect(state.settings.animationMode).toBe('normal');
+  });
+
+  it('dismisses onboarding through the reducer', () => {
+    const state = createInitialGameState();
+
+    const nextState = applyAction(state, {
+      type: 'DISMISS_ONBOARDING',
+    });
+
+    expect(nextState.showOnboarding).toBe(false);
+    expect(state.showOnboarding).toBe(true);
+  });
+
+  it('advances the business stage during TICK when progression thresholds are met', () => {
+    const state = {
+      ...createInitialGameState(),
+      turn: 119,
+      lastAttackTurn: 119,
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        trust: 15,
+      }),
+    };
+
+    const nextState = applyAction(state, { type: 'TICK', deltaMs: 1000 });
+
+    expect(nextState.businessStageId).toBe('visible_pme');
+    expect(nextState.resources.budget).toBe(100);
+    expect(nextState.resources.exposure).toBe(25);
+    expect(nextState.businessMomentum).toBe(10);
+    expect(nextState.narrativeLog.some((entry) => entry.messageKey === 'events.business.stage.visible_pme')).toBe(
+      true,
+    );
+  });
+
+  it('applies a business choice through the reducer', () => {
+    const state = {
+      ...createInitialGameState(),
+      pendingBusinessEventId: 'launch_marketplace',
+      businessStageId: 'visible_pme' as const,
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        trust: 25,
+      }),
+    };
+
+    const nextState = applyAction(state, {
+      type: 'CHOOSE_BUSINESS_OPTION',
+      eventId: 'launch_marketplace',
+      choiceId: 'block_temporarily',
+    });
+
+    expect(nextState.pendingBusinessEventId).toBeUndefined();
+    expect(nextState.businessEventHistory).toEqual(['launch_marketplace']);
+    expect(nextState.resources.trust).toBe(10);
+    expect(nextState.resources.fatigue).toBe(3);
+    expect(nextState.businessMomentum).toBe(0);
+    expect(nextState.narrativeLog.at(-1)?.messageKey).toBe('events.business.launch_marketplace.block_temporarily');
+  });
+
+  it('executes a crisis action through the reducer and can enter recovery', () => {
+    const state = {
+      ...createInitialGameState(),
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        trust: 3,
+        proofs: 50,
+        findings: 20,
+      }),
+      activeIncidentIds: ['ransomware_minor'],
+      crisis: {
+        level: 'active' as const,
+        causes: ['major_incident' as const],
+        startedAtTurn: 12,
+        lastEscalationTurn: 12,
+        recoveryProgress: 90,
+      },
+    };
+
+    const nextState = applyAction(state, {
+      type: 'EXECUTE_CRISIS_ACTION',
+      crisisActionId: 'emergency_comex_briefing',
+    });
+
+    expect(nextState.resources.proofs).toBe(20);
+    expect(nextState.resources.findings).toBe(0);
+    expect(nextState.resources.trust).toBe(13);
+    expect(nextState.crisis.level).toBe('recovery');
+    expect(nextState.crisis.recoveryProgress).toBe(100);
+    expect(nextState.narrativeLog.at(-2)?.messageKey).toBe('events.crisis.emergency_comex_briefing');
+    expect(nextState.narrativeLog.at(-1)?.messageKey).toBe('events.crisis.recovery.entered');
+  });
+
+  it('increments resolvedCrisisCount once when recovery ends', () => {
+    const state = {
+      ...createInitialGameState(),
+      turn: 20,
+      resources: normalizeResources({
+        ...createInitialGameState().resources,
+        trust: 20,
+        fatigue: 20,
+      }),
+      crisis: {
+        level: 'recovery' as const,
+        causes: [],
+        startedAtTurn: 16,
+        lastEscalationTurn: 19,
+        recoveryProgress: 100,
+      },
+    };
+
+    const nextState = applyAction(state, {
+      type: 'TICK',
+      deltaMs: 1000,
+    });
+    const repeatedState = applyAction(nextState, {
+      type: 'TICK',
+      deltaMs: 1000,
+    });
+
+    expect(nextState.crisis.level).toBe('none');
+    expect(nextState.resolvedCrisisCount).toBe(1);
+    expect(repeatedState.resolvedCrisisCount).toBe(1);
   });
 
   it('assigns a compatible unlocked employee to a task', () => {

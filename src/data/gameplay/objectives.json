@@ -1,0 +1,144 @@
+[
+  {
+    "id": "collect_first_logs",
+    "seasonId": "season_1_visibility",
+    "titleKey": "objectives.collect_first_logs.title",
+    "descriptionKey": "objectives.collect_first_logs.description",
+    "hintKey": "objectives.collect_first_logs.hint",
+    "status": "active",
+    "conditions": [
+      {
+        "type": "resource_at_least",
+        "resourceId": "logs",
+        "value": 30
+      }
+    ],
+    "reward": {
+      "proofs": 5
+    },
+    "unlocksObjectiveIds": [
+      "create_asset_register"
+    ]
+  },
+  {
+    "id": "create_asset_register",
+    "seasonId": "season_1_visibility",
+    "titleKey": "objectives.create_asset_register.title",
+    "descriptionKey": "objectives.create_asset_register.description",
+    "hintKey": "objectives.create_asset_register.hint",
+    "status": "locked",
+    "conditions": [
+      {
+        "type": "technology_unlocked",
+        "technologyId": "asset_register"
+      }
+    ],
+    "reward": {
+      "trust": 3
+    },
+    "unlocksObjectiveIds": [
+      "reach_visibility_30"
+    ]
+  },
+  {
+    "id": "reach_visibility_30",
+    "seasonId": "season_1_visibility",
+    "titleKey": "objectives.reach_visibility_30.title",
+    "descriptionKey": "objectives.reach_visibility_30.description",
+    "hintKey": "objectives.reach_visibility_30.hint",
+    "status": "locked",
+    "conditions": [
+      {
+        "type": "resource_at_least",
+        "resourceId": "visibility",
+        "value": 30
+      }
+    ],
+    "reward": {
+      "proofs": 20
+    }
+  },
+  {
+    "id": "reach_trust_30",
+    "seasonId": "season_1_visibility",
+    "titleKey": "objectives.reach_trust_30.title",
+    "descriptionKey": "objectives.reach_trust_30.description",
+    "hintKey": "objectives.reach_trust_30.hint",
+    "status": "active",
+    "conditions": [
+      {
+        "type": "resource_at_least",
+        "resourceId": "trust",
+        "value": 30
+      }
+    ],
+    "reward": {
+      "budget": 100
+    }
+  },
+  {
+    "id": "unlock_four_technologies",
+    "seasonId": "season_1_visibility",
+    "titleKey": "objectives.unlock_four_technologies.title",
+    "descriptionKey": "objectives.unlock_four_technologies.description",
+    "hintKey": "objectives.unlock_four_technologies.hint",
+    "status": "active",
+    "conditions": [
+      {
+        "type": "technology_unlocked",
+        "technologyId": "asset_register"
+      },
+      {
+        "type": "technology_unlocked",
+        "technologyId": "basic_log_collector"
+      },
+      {
+        "type": "technology_unlocked",
+        "technologyId": "incident_procedure_v0"
+      },
+      {
+        "type": "technology_unlocked",
+        "technologyId": "phishing_awareness_v0"
+      }
+    ],
+    "reward": {
+      "trust": 5
+    }
+  },
+  {
+    "id": "survive_one_incident",
+    "seasonId": "season_1_visibility",
+    "titleKey": "objectives.survive_one_incident.title",
+    "descriptionKey": "objectives.survive_one_incident.description",
+    "hintKey": "objectives.survive_one_incident.hint",
+    "status": "active",
+    "conditions": [
+      {
+        "type": "incident_survived",
+        "count": 1
+      }
+    ],
+    "reward": {
+      "findings": 20,
+      "proofs": 10
+    }
+  },
+  {
+    "id": "reach_resilience_10",
+    "seasonId": "season_1_visibility",
+    "titleKey": "objectives.reach_resilience_10.title",
+    "descriptionKey": "objectives.reach_resilience_10.description",
+    "hintKey": "objectives.reach_resilience_10.hint",
+    "status": "active",
+    "conditions": [
+      {
+        "type": "resource_at_least",
+        "resourceId": "resilience",
+        "value": 10
+      }
+    ],
+    "reward": {
+      "trust": 3
+    }
+  }
+]

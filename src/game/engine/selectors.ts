@@ -1,4 +1,7 @@
 import type { GameState, NarrativeLogEntry } from '../model/GameState';
+import type { BusinessEvent, BusinessStage } from '../model/Business';
+import type { Objective, ObjectiveStatus } from '../model/Objective';
+import type { Technology } from '../model/Technology';
 import type {
   InfrastructureLinkStatus,
   InfrastructureLinkView,
@@ -7,13 +10,19 @@ import type {
   InfrastructureNodeView,
   InfrastructurePulseMode,
 } from '../model/InfrastructureMap';
-import { MANUAL_ACTION_IDS } from './manualActions';
+import { getManualActionDefinition, MANUAL_ACTION_IDS } from './manualActions';
 import type { ManualActionId } from '../model/ManualAction';
 import type { AttackOutcome } from '../model/Attack';
 import type { Employee } from '../model/Employee';
-import { createEmptyEffectiveStats, type EffectiveStats, type Technology } from '../model/Technology';
+import { createEmptyEffectiveStats, type EffectiveStats } from '../model/Technology';
 import { RESOURCE_IDS, type ResourceId, type Resources } from '../model/Resource';
 import type { EmployeeTask } from './employeeTasks';
+import {
+  getBusinessStage as getBusinessStageDefinition,
+  getBusinessStageLevel,
+  getNextBusinessStage as getNextBusinessStageDefinition,
+  getPendingBusinessEvent as getPendingBusinessEventDefinition,
+} from './business';
 import { getEmployeeTaskDefinition, EMPLOYEE_TASKS } from './employeeTasks';
 import { getEmployeeProductivityMultiplier, getEmployeeTaskStatsContribution, getEmployeeStatus } from './employees';
 import {
@@ -23,6 +32,12 @@ import {
   sumTechnologyStats,
   TECHNOLOGIES,
 } from './technologies';
+import {
+  canExecuteCrisisAction as canExecuteCrisisActionDefinition,
+  CRISIS_ACTIONS,
+} from './crisis';
+import { getObjectiveStatus, getObjectivesForSeason } from './objectives';
+import { getSeasonDefinition, SEASONS } from './seasons';
 
 export type VisibleResource = {
   id: ResourceId;
@@ -40,6 +55,38 @@ export type ActiveIncidentSummary = {
   attackId: string;
   count: number;
 };
+
+export type AppTabId = 'soc' | 'tech' | 'team' | 'business' | 'crisis';
+
+export type AppTab = {
+  id: AppTabId;
+  labelKey: string;
+};
+
+export type ObjectiveView = Objective & {
+  status: ObjectiveStatus;
+  isRequired: boolean;
+};
+
+const APP_TABS: AppTab[] = [
+  { id: 'soc', labelKey: 'ui.tab.soc' },
+  { id: 'tech', labelKey: 'tech.title' },
+  { id: 'team', labelKey: 'employees.title' },
+  { id: 'business', labelKey: 'business.title' },
+  { id: 'crisis', labelKey: 'crisis.title' },
+];
+
+const TECHNOLOGY_REVEAL_ORDER = [
+  'asset_register',
+  'basic_log_collector',
+  'basic_vulnerability_scanner',
+  'incident_procedure_v0',
+  'phishing_awareness_v0',
+  'centralized_logs',
+  'minimal_siem',
+  'siem_analyst',
+  'patch_management_v1',
+];
 
 function canEmployeeUseTask(state: GameState, employee: Employee, task: EmployeeTask): boolean {
   if (!employee.unlocked || getEmployeeStatus(employee) === 'exhausted') {
@@ -136,11 +183,30 @@ function getNodeLabelKey(index: number): string {
 function getIncidentNodeCount(state: GameState, totalNodes: number): number {
   const maybeIncidentIds = (state as GameState & { activeIncidentIds?: string[] }).activeIncidentIds;
 
-  if (!Array.isArray(maybeIncidentIds) || maybeIncidentIds.length === 0) {
+  const currentIncidentCount = Array.isArray(maybeIncidentIds) ? maybeIncidentIds.length : 0;
+  let minimumIncidentCount = 0;
+
+  switch (state.crisis.level) {
+    case 'active':
+      minimumIncidentCount = 1;
+      break;
+
+    case 'severe':
+      minimumIncidentCount = 2;
+      break;
+
+    case 'recovery':
+    case 'watch':
+    case 'none':
+      minimumIncidentCount = 0;
+      break;
+  }
+
+  if (currentIncidentCount === 0 && minimumIncidentCount === 0) {
     return 0;
   }
 
-  return clamp(Math.min(3, Math.max(1, maybeIncidentIds.length)), 0, Math.max(0, totalNodes - 1));
+  return clamp(Math.min(3, Math.max(Math.max(1, currentIncidentCount), minimumIncidentCount)), 0, Math.max(0, totalNodes - 1));
 }
 
 function getDebtNodeCount(totalNodes: number, knownDebt: number): number {
@@ -174,7 +240,8 @@ export function getVisibleInfrastructureNodeCount(state: GameState): number {
   const visibleNodes =
     1 +
     Math.floor(state.resources.visibility / 5) +
-    Math.floor(state.resources.exposure / 25);
+    Math.floor(state.resources.exposure / 25) +
+    (getBusinessStageLevel(state) - 1);
 
   return clamp(visibleNodes, 1, MAX_VISIBLE_INFRASTRUCTURE_NODES);
 }
@@ -185,11 +252,11 @@ export function getInfrastructureNodeStatus(
   totalNodes: number,
 ): InfrastructureNodeStatus {
   if (index === 0) {
-    return state.resources.visibility >= 20 ? 'critical' : 'known';
+    return state.resources.visibility >= 20 || state.crisis.level === 'severe' ? 'critical' : 'known';
   }
 
   const incidentNodeCount = getIncidentNodeCount(state, totalNodes);
-  const debtNodeCount = getDebtNodeCount(totalNodes, state.resources.knownDebt);
+  const debtNodeCount = getDebtNodeCount(totalNodes, state.resources.knownDebt) + (state.crisis.level === 'watch' ? 1 : 0);
   const stabilityScore =
     state.resources.resilience +
     state.resources.visibility * 0.3 -
@@ -320,10 +387,173 @@ export function getInfrastructureMapView(state: GameState): InfrastructureMapVie
   };
 }
 
-export function selectVisibleResources(resources: Resources): VisibleResource[] {
-  return RESOURCE_IDS.map((resourceId) => ({
+function isTechnologyVisibleByProgressiveReveal(state: GameState, technologyId: string): boolean {
+  if (state.unlockedTechnologyIds.includes(technologyId)) {
+    return true;
+  }
+
+  switch (technologyId) {
+    case 'asset_register':
+      return (
+        canBuyTechnology(state, 'asset_register') ||
+        state.resources.logs >= 30 ||
+        state.resources.findings >= 10 ||
+        state.flags.action_manual_audit_used === true
+      );
+
+    case 'basic_log_collector':
+    case 'basic_vulnerability_scanner':
+    case 'incident_procedure_v0':
+    case 'phishing_awareness_v0':
+      return state.unlockedTechnologyIds.includes('asset_register');
+
+    case 'centralized_logs':
+      return (
+        state.unlockedTechnologyIds.includes('basic_log_collector') ||
+        state.availableTechnologyIds.includes('centralized_logs')
+      );
+
+    case 'minimal_siem':
+      return (
+        state.unlockedTechnologyIds.includes('centralized_logs') ||
+        state.availableTechnologyIds.includes('minimal_siem')
+      );
+
+    case 'siem_analyst':
+      return (
+        state.unlockedTechnologyIds.includes('minimal_siem') ||
+        state.availableTechnologyIds.includes('siem_analyst')
+      );
+
+    case 'patch_management_v1':
+      return (
+        state.unlockedTechnologyIds.includes('basic_vulnerability_scanner') ||
+        state.availableTechnologyIds.includes('patch_management_v1')
+      );
+
+    default:
+      return false;
+  }
+}
+
+function isEmployeeVisibleByProgressiveReveal(state: GameState, employee: Employee): boolean {
+  if (employee.id === 'admin_1') {
+    return state.resources.logs >= 10 || state.flags.action_manual_audit_used === true;
+  }
+
+  if (employee.unlocked) {
+    return true;
+  }
+
+  switch (employee.id) {
+    case 'analyst_1':
+      return state.unlockedTechnologyIds.includes('centralized_logs') || state.resources.logs >= 300;
+
+    case 'auditor_1':
+      return state.unlockedTechnologyIds.includes('asset_register') || state.resources.findings >= 50;
+
+    case 'secops_1':
+      return (
+        state.unlockedTechnologyIds.includes('basic_vulnerability_scanner') || state.resources.knownDebt >= 30
+      );
+
+    case 'governance_1':
+      return state.resources.trust >= 20 || state.flags.action_write_comex_report_used === true;
+
+    default:
+      return false;
+  }
+}
+
+function isManualActionUsefulForFatigue(actionId: ManualActionId): boolean {
+  return (getManualActionDefinition(actionId).effect.fatigue ?? 0) > 0;
+}
+
+function doesVisibleTechnologyUseBudget(state: GameState): boolean {
+  return getVisibleTechnologyOptions(state).some((technology) => (technology.cost.budget ?? 0) > 0);
+}
+
+function isBusinessVisible(state: GameState): boolean {
+  return (
+    state.businessStageId !== 'small_company' ||
+    state.businessMomentum > 0 ||
+    Boolean(state.pendingBusinessEventId) ||
+    state.turn >= 120
+  );
+}
+
+function isThreatVisible(state: GameState): boolean {
+  return (
+    Boolean(getLastThreatEvent(state)) ||
+    state.activeIncidentIds.length > 0 ||
+    state.survivedIncidentCount > 0 ||
+    state.crisis.level !== 'none' ||
+    isBusinessVisible(state)
+  );
+}
+
+function getVisibleTechnologyOptions(state: GameState): Technology[] {
+  return [...TECHNOLOGIES]
+    .filter((technology) => isTechnologyVisibleByProgressiveReveal(state, technology.id))
+    .sort(
+      (leftTechnology, rightTechnology) =>
+        TECHNOLOGY_REVEAL_ORDER.indexOf(leftTechnology.id) -
+        TECHNOLOGY_REVEAL_ORDER.indexOf(rightTechnology.id),
+    );
+}
+
+function sortTechnologiesByRevealOrder(technologies: Technology[]): Technology[] {
+  return [...technologies].sort(
+    (leftTechnology, rightTechnology) =>
+      TECHNOLOGY_REVEAL_ORDER.indexOf(leftTechnology.id) -
+      TECHNOLOGY_REVEAL_ORDER.indexOf(rightTechnology.id),
+  );
+}
+
+export function selectVisibleResources(state: GameState): VisibleResource[] {
+  const visibleResourceIds = new Set<ResourceId>(['logs', 'findings', 'proofs', 'trust']);
+
+  if (state.resources.budget > 0 || doesVisibleTechnologyUseBudget(state)) {
+    visibleResourceIds.add('budget');
+  }
+
+  if (state.unlockedTechnologyIds.includes('asset_register') || state.resources.visibility > 1) {
+    visibleResourceIds.add('visibility');
+  }
+
+  if (state.flags.action_manual_audit_used === true || state.resources.knownDebt > 0) {
+    visibleResourceIds.add('knownDebt');
+    visibleResourceIds.add('unknownDebt');
+  }
+
+  if (
+    state.resources.fatigue > 0 ||
+    getAvailableManualActions(state).some((actionId) => isManualActionUsefulForFatigue(actionId))
+  ) {
+    visibleResourceIds.add('fatigue');
+  }
+
+  if (isBusinessVisible(state) || state.resources.exposure > 10) {
+    visibleResourceIds.add('exposure');
+  }
+
+  if (
+    state.unlockedTechnologyIds.includes('incident_procedure_v0') ||
+    isTechnologyVisibleByProgressiveReveal(state, 'incident_procedure_v0')
+  ) {
+    visibleResourceIds.add('resilience');
+  }
+
+  if (
+    state.unlockedTechnologyIds.includes('centralized_logs') ||
+    state.unlockedTechnologyIds.includes('minimal_siem')
+  ) {
+    visibleResourceIds.add('alertNoise');
+  }
+
+  return RESOURCE_IDS.filter((resourceId) => visibleResourceIds.has(resourceId)).map((resourceId) => ({
     id: resourceId,
-    value: resources[resourceId],
+    value: state.resources[resourceId],
   }));
 }
 
@@ -357,6 +587,14 @@ export function getUnlockedTechnologies(state: GameState): Technology[] {
   return state.unlockedTechnologyIds
     .map((technologyId) => getTechnologyDefinition(technologyId))
     .filter((technology): technology is Technology => technology !== undefined);
+}
+
+export function getVisibleUnlockedTechnologies(state: GameState): Technology[] {
+  return sortTechnologiesByRevealOrder(
+    getUnlockedTechnologies(state).filter((technology) =>
+      isTechnologyVisibleByProgressiveReveal(state, technology.id),
+    ),
+  );
 }
 
 export function getTechnologyMissingRequirements(state: GameState, technologyId: string): string[] {
@@ -428,6 +666,26 @@ export function canBuyTechnology(state: GameState, technologyId: string): boolea
   return canAffordTechnologyCost(state.resources, technology);
 }
 
+export function getVisibleAvailableTechnologies(state: GameState): Technology[] {
+  return sortTechnologiesByRevealOrder(
+    getAvailableTechnologies(state).filter((technology) =>
+      isTechnologyVisibleByProgressiveReveal(state, technology.id),
+    ),
+  );
+}
+
+export function getVisibleLockedTechnologies(state: GameState): Technology[] {
+  return sortTechnologiesByRevealOrder(
+    getLockedTechnologies(state).filter((technology) =>
+      isTechnologyVisibleByProgressiveReveal(state, technology.id),
+    ),
+  );
+}
+
+export function isTechnologyPanelVisible(state: GameState): boolean {
+  return getVisibleAvailableTechnologies(state).length > 0 || getVisibleUnlockedTechnologies(state).length > 0;
+}
+
 export function getEffectiveStats(state: GameState): EffectiveStats {
   const stats = state.unlockedTechnologyIds.length === 0
     ? createEmptyEffectiveStats()
@@ -448,8 +706,20 @@ export function getUnlockedEmployees(state: GameState): Employee[] {
   return state.employees.filter((employee) => employee.unlocked);
 }
 
+export function getVisibleUnlockedEmployees(state: GameState): Employee[] {
+  return getUnlockedEmployees(state).filter((employee) => isEmployeeVisibleByProgressiveReveal(state, employee));
+}
+
 export function getLockedEmployees(state: GameState): Employee[] {
   return state.employees.filter((employee) => !employee.unlocked);
+}
+
+export function getVisibleLockedEmployees(state: GameState): Employee[] {
+  return getLockedEmployees(state).filter((employee) => isEmployeeVisibleByProgressiveReveal(state, employee));
+}
+
+export function isEmployeePanelVisible(state: GameState): boolean {
+  return getVisibleUnlockedEmployees(state).length > 0 || getVisibleLockedEmployees(state).length > 0;
 }
 
 export function getEmployeeById(state: GameState, employeeId: string): Employee | undefined {
@@ -541,4 +811,141 @@ export function getActiveIncidentSummaries(state: GameState): ActiveIncidentSumm
       count,
     }))
     .sort((left, right) => right.count - left.count || left.attackId.localeCompare(right.attackId));
+}
+
+export function getCurrentBusinessStage(state: GameState): BusinessStage {
+  return getBusinessStageDefinition(state);
+}
+
+export function isBusinessPanelVisible(state: GameState): boolean {
+  return isBusinessVisible(state);
+}
+
+export function getCurrentSeason(state: GameState) {
+  return getSeasonDefinition(state.currentSeasonId) ?? SEASONS[0];
+}
+
+export function getCurrentSeasonObjectives(state: GameState): ObjectiveView[] {
+  const season = getCurrentSeason(state);
+  const requiredObjectiveIds = new Set(season.requiredObjectiveIds);
+  const statusOrder: Record<ObjectiveStatus, number> = {
+    active: 0,
+    locked: 1,
+    completed: 2,
+  };
+
+  return getObjectivesForSeason(season.id)
+    .map((objective) => ({
+      ...objective,
+      status: getObjectiveStatus(state, objective.id),
+      isRequired: requiredObjectiveIds.has(objective.id),
+    }))
+    .sort(
+      (left, right) =>
+        statusOrder[left.status] - statusOrder[right.status] || left.titleKey.localeCompare(right.titleKey),
+    );
+}
+
+export function getActiveObjectives(state: GameState): ObjectiveView[] {
+  return getCurrentSeasonObjectives(state).filter((objective) => objective.status === 'active');
+}
+
+export function getCompletedObjectives(state: GameState): ObjectiveView[] {
+  return getCurrentSeasonObjectives(state).filter((objective) => objective.status === 'completed');
+}
+
+export function getLockedObjectives(state: GameState): ObjectiveView[] {
+  return getCurrentSeasonObjectives(state).filter((objective) => objective.status === 'locked');
+}
+
+export function getSeasonProgress(state: GameState): {
+  completedRequiredCount: number;
+  totalRequiredCount: number;
+  percent: number;
+} {
+  const season = getCurrentSeason(state);
+  const completedRequiredCount = season.requiredObjectiveIds.filter((objectiveId) =>
+    state.completedObjectiveIds.includes(objectiveId),
+  ).length;
+  const totalRequiredCount = season.requiredObjectiveIds.length;
+
+  return {
+    completedRequiredCount,
+    totalRequiredCount,
+    percent:
+      totalRequiredCount === 0 ? 100 : Math.round((completedRequiredCount / totalRequiredCount) * 100),
+  };
+}
+
+export function isCurrentSeasonCompleted(state: GameState): boolean {
+  return state.completedSeasonIds.includes(state.currentSeasonId);
+}
+
+export function getNextBusinessStage(state: GameState): BusinessStage | undefined {
+  return getNextBusinessStageDefinition(state);
+}
+
+export function getPendingBusinessEvent(state: GameState): BusinessEvent | undefined {
+  if (
+    state.crisis.level === 'active' ||
+    state.crisis.level === 'severe' ||
+    state.crisis.level === 'recovery'
+  ) {
+    return undefined;
+  }
+
+  return getPendingBusinessEventDefinition(state);
+}
+
+export function isInCrisis(state: GameState): boolean {
+  return state.crisis.level !== 'none';
+}
+
+export function isThreatPanelVisible(state: GameState): boolean {
+  return isThreatVisible(state);
+}
+
+export function isCrisisPanelVisible(state: GameState): boolean {
+  return isInCrisis(state);
+}
+
+export function getVisibleTabs(state: GameState): AppTab[] {
+  return APP_TABS.filter((tab) => {
+    switch (tab.id) {
+      case 'soc':
+        return true;
+
+      case 'tech':
+        return isTechnologyPanelVisible(state);
+
+      case 'team':
+        return isEmployeePanelVisible(state);
+
+      case 'business':
+        return isBusinessPanelVisible(state);
+
+      case 'crisis':
+        return isCrisisPanelVisible(state);
+    }
+  });
+}
+
+export function getAvailableCrisisActions(state: GameState) {
+  if (!isInCrisis(state)) {
+    return [];
+  }
+
+  return CRISIS_ACTIONS.filter((crisisAction) => crisisAction.availableInLevels.includes(state.crisis.level));
+}
+
+export function canExecuteCrisisAction(state: GameState, crisisActionId: string): boolean {
+  return canExecuteCrisisActionDefinition(state, crisisActionId);
+}
+
+export function getCrisisStatusLabelKey(state: GameState): string {
+  return `crisis.status.${state.crisis.level}`;
+}
+
+export function getCrisisCauseLabelKeys(state: GameState): string[] {
+  return state.crisis.causes.map((cause) => `crisis.cause.${cause}`);
 }

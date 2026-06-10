@@ -1,6 +1,6 @@
 {
   "collect_logs": {
-    "durationMs": 2500,
+    "durationMs": 7000,
     "cost": {},
     "effect": {
       "logs": 10
@@ -8,7 +8,7 @@
     "completedMessageKey": "events.action.collect_logs.completed"
   },
   "analyze_alert": {
-    "durationMs": 3500,
+    "durationMs": 9000,
     "cost": {
       "logs": 10
     },
@@ -19,7 +19,7 @@
     "completedMessageKey": "events.action.analyze_alert.completed"
   },
   "manual_audit": {
-    "durationMs": 5000,
+    "durationMs": 12000,
     "cost": {},
     "effect": {
       "findings": 5,
@@ -31,7 +31,7 @@
     "completedMessageKey": "events.action.manual_audit.completed"
   },
   "write_comex_report": {
-    "durationMs": 6000,
+    "durationMs": 14000,
     "cost": {
       "findings": 20,
       "proofs": 20
